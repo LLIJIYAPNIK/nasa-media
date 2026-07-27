@@ -20,7 +20,7 @@ class FakeResponse:
         if self.status >= 400:
             raise RuntimeError(f"HTTP {self.status}")
 
-    async def __aenter__(self) -> "FakeResponse":
+    async def __aenter__(self) -> FakeResponse:
         return self
 
     async def __aexit__(self, exc_type, exc, tb) -> bool:
@@ -50,7 +50,7 @@ class FakeClientSession:
         except KeyError:
             raise AssertionError(f"Незапланированный запрос: {full_url}") from None
 
-    async def __aenter__(self) -> "FakeClientSession":
+    async def __aenter__(self) -> FakeClientSession:
         return self
 
     async def __aexit__(self, exc_type, exc, tb) -> bool:

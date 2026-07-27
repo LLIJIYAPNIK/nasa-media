@@ -15,6 +15,7 @@ from domain.media.exceptions import MediaNotAvailable
 from domain.media.value_objects import EPIC_LOWER_BOUND, InvalidMediaDate, MediaSourceKind
 from presentation.telegram.date_input import parse_requested_date
 from presentation.telegram.keyboards.epic_kb import get_epic_kb
+from presentation.telegram.message_guards import require_bot, require_message
 from presentation.telegram.states import EpicDateForm
 from presentation.telegram.subscribe_handler import register_subscribe_handlers
 
@@ -28,10 +29,11 @@ def build_epic_router(
 
     @router.callback_query(F.data == "epic")
     async def start(callback_query: CallbackQuery, state: FSMContext) -> None:
+        message = require_message(callback_query)
         await state.set_state(EpicDateForm.date)
-        await callback_query.message.delete()
-        user = await get_or_create_user.execute(callback_query.message.chat.id)
-        await callback_query.message.answer(
+        await message.delete()
+        user = await get_or_create_user.execute(message.chat.id)
+        await message.answer(
             "EPIC - Earth Polychromatic Imaging Camera\n\nВведите дату (ГГГГ-ММ-ДД):",
             reply_markup=get_epic_kb(user.epic_subscribed),
         )
@@ -44,7 +46,7 @@ def build_epic_router(
             await message.reply(str(error))
             return
 
-        async with ChatActionSender.upload_photo(bot=message.bot, chat_id=message.chat.id):
+        async with ChatActionSender.upload_photo(bot=require_bot(message), chat_id=message.chat.id):
             try:
                 await deliver_media.execute(requested, message.chat.id)
             except MediaNotAvailable:

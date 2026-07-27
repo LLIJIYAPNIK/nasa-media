@@ -31,9 +31,7 @@ async def test_publish_single_sends_by_direct_url_when_telegram_accepts_it():
 
 async def test_publish_single_falls_back_to_download_when_telegram_rejects_direct_url():
     bot = MagicMock()
-    bot.send_photo = AsyncMock(
-        side_effect=[TelegramBadRequest(MagicMock(), "bad url"), MagicMock(message_id=7)]
-    )
+    bot.send_photo = AsyncMock(side_effect=[TelegramBadRequest(MagicMock(), "bad url"), MagicMock(message_id=7)])
     session = FakeClientSession({"http://example.com/img.jpg": FakeResponse(body=_fake_jpeg_bytes())})
     gateway = TelegramAdminChatGateway(session, bot, ADMIN_CHAT_ID)
     payload = SinglePhotoPayload(image_url="http://example.com/img.jpg", caption="caption")

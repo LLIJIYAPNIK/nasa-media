@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import date as date_
-from typing import Sequence
 
 import aiohttp
 

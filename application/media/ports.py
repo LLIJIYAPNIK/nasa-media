@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date as date_
-from typing import Protocol, Sequence
+from typing import Protocol
 
 from domain.media.entities import ApodEntry, EpicDay
 from domain.media.value_objects import MediaSourceKind
@@ -28,11 +29,20 @@ MediaPayload = SinglePhotoPayload | PhotoGroupPayload
 
 
 @dataclass(frozen=True, slots=True)
-class CachedMessageRef:
-    """Что возвращает admin-чат после первой публикации — то, что кладём в репозиторий."""
+class SingleMessageRef:
+    """Что возвращает admin-чат после публикации SinglePhotoPayload (APOD)."""
 
-    message_id: int | None = None
-    frame_file_ids: tuple[str, ...] = ()
+    message_id: int
+
+
+@dataclass(frozen=True, slots=True)
+class GroupMessageRef:
+    """Что возвращает admin-чат после публикации PhotoGroupPayload (EPIC)."""
+
+    frame_file_ids: tuple[str, ...]
+
+
+CachedMessageRef = SingleMessageRef | GroupMessageRef
 
 
 class MediaProvider(Protocol):

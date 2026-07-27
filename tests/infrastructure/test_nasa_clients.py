@@ -78,7 +78,11 @@ async def test_apod_provider_prefers_hdurl_when_present():
 
 async def test_apod_provider_raises_when_media_is_not_an_image():
     session = FakeClientSession(
-        {f"{APOD_URL}?date=2024-01-01&api_key=key": FakeResponse(json_data={"media_type": "video", "url": "http://img"})}
+        {
+            f"{APOD_URL}?date=2024-01-01&api_key=key": FakeResponse(
+                json_data={"media_type": "video", "url": "http://img"}
+            )
+        }
     )
     provider = ApodProvider(session, "key", APOD_URL, FakeTranslator())
 
@@ -98,7 +102,9 @@ async def test_epic_provider_downloads_every_returned_frame():
     day = date(2024, 1, 1)
     session = FakeClientSession(
         {
-            f"{EPIC_URL}/date/2024-01-01?api_key=key": FakeResponse(json_data=[{"image": "frame1"}, {"image": "frame2"}]),
+            f"{EPIC_URL}/date/2024-01-01?api_key=key": FakeResponse(
+                json_data=[{"image": "frame1"}, {"image": "frame2"}]
+            ),
             f"{EPIC_ARCHIVE_BASE_URL}/2024/01/01/png/frame1.png?api_key=key": FakeResponse(body=b"bytes1"),
             f"{EPIC_ARCHIVE_BASE_URL}/2024/01/01/png/frame2.png?api_key=key": FakeResponse(body=b"bytes2"),
         }

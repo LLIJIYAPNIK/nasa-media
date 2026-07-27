@@ -1,14 +1,21 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Sequence
+from collections.abc import Sequence
 
 import aiohttp
 from aiogram import Bot
 from aiogram.exceptions import TelegramBadRequest
-from aiogram.types import FSInputFile, InputMediaPhoto, Message
+from aiogram.types import FSInputFile, InputMediaPhoto, MediaUnion, Message
 
-from application.media.ports import CachedMessageRef, MediaPayload, PhotoGroupPayload, SinglePhotoPayload
+from application.media.ports import (
+    CachedMessageRef,
+    GroupMessageRef,
+    MediaPayload,
+    PhotoGroupPayload,
+    SingleMessageRef,
+    SinglePhotoPayload,
+)
 from infrastructure.files.temp_file import remove_temp_file, temp_image_file, write_temp_image
 from infrastructure.http import fetch_bytes
 
@@ -32,7 +39,7 @@ class TelegramAdminChatGateway:
         await self._bot.copy_message(chat_id=chat_id, from_chat_id=self._admin_chat_id, message_id=message_id)
 
     async def forward_group(self, frame_file_ids: Sequence[str], chat_id: int) -> None:
-        media = [InputMediaPhoto(media=file_id) for file_id in frame_file_ids]
+        media: list[MediaUnion] = [InputMediaPhoto(media=file_id) for file_id in frame_file_ids]
         await self._bot.send_media_group(chat_id=chat_id, media=media)
 
     async def _publish_single(self, payload: SinglePhotoPayload) -> CachedMessageRef:
@@ -45,7 +52,7 @@ class TelegramAdminChatGateway:
         except TelegramBadRequest:
             # Telegram не смог сам обратиться по ссылке — скачиваем и грузим файлом.
             message = await self._send_photo_via_download(payload.image_url, payload.caption)
-        return CachedMessageRef(message_id=message.message_id)
+        return SingleMessageRef(message_id=message.message_id)
 
     async def _send_photo_via_download(self, image_url: str, caption: str) -> Message:
         raw_bytes = await fetch_bytes(self._session, image_url)
@@ -57,10 +64,14 @@ class TelegramAdminChatGateway:
     async def _publish_group(self, payload: PhotoGroupPayload) -> CachedMessageRef:
         file_paths = await asyncio.gather(*(write_temp_image(image_bytes) for image_bytes in payload.images))
         try:
-            media = [InputMediaPhoto(media=FSInputFile(path)) for path in file_paths]
+            media: list[MediaUnion] = [InputMediaPhoto(media=FSInputFile(path)) for path in file_paths]
             messages = await self._bot.send_media_group(chat_id=self._admin_chat_id, media=media)
         finally:
             for path in file_paths:
                 remove_temp_file(path)
-        frame_ids = tuple(message.photo[-1].file_id for message in messages)
-        return CachedMessageRef(frame_file_ids=frame_ids)
+
+        frame_ids = []
+        for message in messages:
+            assert message.photo is not None, "send_media_group(media=[InputMediaPhoto, ...]) always returns photos"
+            frame_ids.append(message.photo[-1].file_id)
+        return GroupMessageRef(frame_file_ids=tuple(frame_ids))

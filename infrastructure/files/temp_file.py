@@ -3,9 +3,9 @@ from __future__ import annotations
 import asyncio
 import os
 import uuid
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from io import BytesIO
-from typing import AsyncIterator
 
 from PIL import Image
 
@@ -36,7 +36,9 @@ def remove_temp_file(file_path: str) -> None:
 
 
 @asynccontextmanager
-async def temp_image_file(image_bytes: bytes, max_dimensions: tuple[int, int] = DEFAULT_MAX_DIMENSIONS) -> AsyncIterator[str]:
+async def temp_image_file(
+    image_bytes: bytes, max_dimensions: tuple[int, int] = DEFAULT_MAX_DIMENSIONS
+) -> AsyncIterator[str]:
     """Удаление — через try/finally, а не в конце функции-вызывающего:
     гарантированно сработает даже если отправка в Telegram упадёт с исключением."""
     file_path = await write_temp_image(image_bytes, max_dimensions)

@@ -1,10 +1,11 @@
 from aiogram import F, Router
-from aiogram.fsm.context import FSMContext
 from aiogram.filters import CommandStart
+from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from application.users.register_user import GetOrCreateUser
 from presentation.telegram.keyboards.start_kb import get_start_kb
+from presentation.telegram.message_guards import require_message
 
 WELCOME_TEXT = "Добро пожаловать! Выберите интересующий раздел, чтобы начать"
 
@@ -20,8 +21,9 @@ def build_start_router(get_or_create_user: GetOrCreateUser) -> Router:
 
     @router.callback_query(F.data == "back_to_start")
     async def cmd_start_callback(callback_query: CallbackQuery, state: FSMContext) -> None:
-        await callback_query.message.delete()
+        message = require_message(callback_query)
+        await message.delete()
         await state.clear()
-        await callback_query.message.answer(WELCOME_TEXT, reply_markup=get_start_kb())
+        await message.answer(WELCOME_TEXT, reply_markup=get_start_kb())
 
     return router
