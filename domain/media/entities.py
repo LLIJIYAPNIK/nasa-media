@@ -11,16 +11,10 @@ class ApodEntry:
 
 
 @dataclass(frozen=True, slots=True)
-class EpicFrame:
-    telegram_file_id: str
-    position: int
-
-
-@dataclass(frozen=True, slots=True)
 class EpicDay:
     date: date_
-    frames: tuple[EpicFrame, ...] = ()
+    gif_message_id: int | None = None
 
     @property
     def is_cached(self) -> bool:
-        return len(self.frames) > 0
+        return self.gif_message_id is not None

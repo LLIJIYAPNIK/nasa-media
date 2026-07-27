@@ -19,30 +19,23 @@ class SinglePhotoPayload:
 
 
 @dataclass(frozen=True, slots=True)
-class PhotoGroupPayload:
-    """EPIC: набор уже скачанных изображений без подписи."""
+class AnimationPayload:
+    """EPIC: собранная из кадров суток анимация (сейчас — GIF, см.
+    TZ-gif-timelapse.md), без подписи."""
 
-    images: Sequence[bytes]
+    gif_bytes: bytes
 
 
-MediaPayload = SinglePhotoPayload | PhotoGroupPayload
+MediaPayload = SinglePhotoPayload | AnimationPayload
 
 
 @dataclass(frozen=True, slots=True)
-class SingleMessageRef:
-    """Что возвращает admin-чат после публикации SinglePhotoPayload (APOD)."""
+class CachedMessageRef:
+    """Что возвращает admin-чат после первой публикации — то, что кладём в
+    репозиторий. Один message_id для обоих источников: EPIC раньше кешировал
+    отдельные кадры как медиа-группу, теперь — как и APOD, одно сообщение."""
 
     message_id: int
-
-
-@dataclass(frozen=True, slots=True)
-class GroupMessageRef:
-    """Что возвращает admin-чат после публикации PhotoGroupPayload (EPIC)."""
-
-    frame_file_ids: tuple[str, ...]
-
-
-CachedMessageRef = SingleMessageRef | GroupMessageRef
 
 
 class MediaProvider(Protocol):
@@ -60,8 +53,6 @@ class AdminChatGateway(Protocol):
 
     async def forward_single(self, message_id: int, chat_id: int) -> None: ...
 
-    async def forward_group(self, frame_file_ids: Sequence[str], chat_id: int) -> None: ...
-
 
 class ApodRepository(Protocol):
     async def get_by_date(self, day: date_) -> ApodEntry | None: ...
@@ -75,7 +66,7 @@ class EpicRepository(Protocol):
     async def save(self, day: EpicDay) -> None: ...
 
     async def ensure_known_dates(self, days: Sequence[date_]) -> None:
-        """Создаёт EpicDay(frames=()) для дат, которых ещё нет в репозитории."""
+        """Создаёт EpicDay(gif_message_id=None) для дат, которых ещё нет в репозитории."""
         ...
 
 

@@ -1,12 +1,21 @@
 from datetime import date
+from io import BytesIO
 
 import pytest
+from PIL import Image
 
 from domain.media.exceptions import MediaNotAvailable
 from infrastructure.nasa.apod_client import ApodProvider
 from infrastructure.nasa.epic_availability_client import EpicAvailabilityClient
 from infrastructure.nasa.epic_client import EPIC_ARCHIVE_BASE_URL, EpicProvider
 from tests.infrastructure.fake_aiohttp import FakeClientSession, FakeResponse
+
+
+def _fake_png_bytes(color: str) -> bytes:
+    buffer = BytesIO()
+    Image.new("RGB", (10, 10), color=color).save(buffer, format="PNG")
+    return buffer.getvalue()
+
 
 APOD_URL = "https://api.nasa.gov/planetary/apod"
 EPIC_URL = "https://api.nasa.gov/EPIC/api/natural"
@@ -98,22 +107,26 @@ async def test_apod_provider_raises_when_nasa_has_no_data_for_date():
         await provider.fetch(date(2024, 1, 1))
 
 
-async def test_epic_provider_downloads_every_returned_frame():
+async def test_epic_provider_builds_animation_from_every_returned_frame():
     day = date(2024, 1, 1)
     session = FakeClientSession(
         {
             f"{EPIC_URL}/date/2024-01-01?api_key=key": FakeResponse(
                 json_data=[{"image": "frame1"}, {"image": "frame2"}]
             ),
-            f"{EPIC_ARCHIVE_BASE_URL}/2024/01/01/png/frame1.png?api_key=key": FakeResponse(body=b"bytes1"),
-            f"{EPIC_ARCHIVE_BASE_URL}/2024/01/01/png/frame2.png?api_key=key": FakeResponse(body=b"bytes2"),
+            f"{EPIC_ARCHIVE_BASE_URL}/2024/01/01/png/frame1.png?api_key=key": FakeResponse(body=_fake_png_bytes("red")),
+            f"{EPIC_ARCHIVE_BASE_URL}/2024/01/01/png/frame2.png?api_key=key": FakeResponse(
+                body=_fake_png_bytes("blue")
+            ),
         }
     )
     provider = EpicProvider(session, "key", EPIC_URL)
 
     payload = await provider.fetch(day)
 
-    assert list(payload.images) == [b"bytes1", b"bytes2"]
+    gif = Image.open(BytesIO(payload.gif_bytes))
+    assert gif.format == "GIF"
+    assert gif.n_frames == 2
 
 
 async def test_epic_provider_raises_when_no_frames_returned():

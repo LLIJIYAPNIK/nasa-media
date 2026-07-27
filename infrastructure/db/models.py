@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from datetime import date as date_
 
-from sqlalchemy import Date, ForeignKey, String, UniqueConstraint
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy import Date
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 class Base(DeclarativeBase):
@@ -23,23 +23,7 @@ class EpicDayModel(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     date: Mapped[date_] = mapped_column(Date, unique=True)
-    frames: Mapped[list[EpicFrameModel]] = relationship(
-        back_populates="epic_day",
-        order_by="EpicFrameModel.position",
-        cascade="all, delete-orphan",
-    )
-
-
-class EpicFrameModel(Base):
-    __tablename__ = "epic_frame"
-    __table_args__ = (UniqueConstraint("epic_day_id", "position"),)
-
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    epic_day_id: Mapped[int] = mapped_column(ForeignKey("epic_day.id"))
-    telegram_file_id: Mapped[str] = mapped_column(String(256))
-    position: Mapped[int]
-
-    epic_day: Mapped[EpicDayModel] = relationship(back_populates="frames")
+    gif_message_id: Mapped[int | None] = mapped_column(unique=True, default=None)
 
 
 class UserModel(Base):
