@@ -1,0 +1,55 @@
+from datetime import date
+
+from domain.media.entities import ApodEntry, EpicDay, EpicFrame
+from domain.media.value_objects import MediaSourceKind
+from infrastructure.db.repositories import SqlAlchemyApodRepository, SqlAlchemyEpicRepository, SqlAlchemyUserRepository
+
+
+async def test_apod_repository_roundtrip(session_factory):
+    repo = SqlAlchemyApodRepository(session_factory)
+    day = date(2024, 1, 1)
+
+    assert await repo.get_by_date(day) is None
+
+    await repo.save(ApodEntry(date=day, message_id=10))
+
+    assert await repo.get_by_date(day) == ApodEntry(date=day, message_id=10)
+
+
+async def test_epic_repository_ensure_known_dates_is_idempotent(session_factory):
+    repo = SqlAlchemyEpicRepository(session_factory)
+    day = date(2024, 1, 1)
+
+    await repo.ensure_known_dates([day])
+    await repo.ensure_known_dates([day])
+
+    epic_day = await repo.get_by_date(day)
+    assert epic_day.frames == ()
+    assert epic_day.is_cached is False
+
+
+async def test_epic_repository_save_frames_in_order(session_factory):
+    repo = SqlAlchemyEpicRepository(session_factory)
+    day = date(2024, 1, 1)
+    await repo.ensure_known_dates([day])
+
+    await repo.save(EpicDay(date=day, frames=(EpicFrame("file-a", 0), EpicFrame("file-b", 1))))
+
+    epic_day = await repo.get_by_date(day)
+    assert [frame.telegram_file_id for frame in epic_day.frames] == ["file-a", "file-b"]
+    assert epic_day.is_cached is True
+
+
+async def test_user_repository_subscription_roundtrip(session_factory):
+    repo = SqlAlchemyUserRepository(session_factory)
+
+    user = await repo.add(chat_id=555)
+    assert user.apod_subscribed is False
+
+    await repo.save(user.with_subscription(MediaSourceKind.APOD, True))
+
+    subscribed = await repo.list_subscribed(MediaSourceKind.APOD)
+    assert [u.chat_id for u in subscribed] == [555]
+
+    unsubscribed = await repo.list_subscribed(MediaSourceKind.EPIC)
+    assert unsubscribed == []
