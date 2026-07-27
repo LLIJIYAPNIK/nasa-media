@@ -6,6 +6,7 @@ from datetime import date as date_
 import aiohttp
 
 from application.media.ports import SinglePhotoPayload, Translator
+from domain.media.apod_caption import build_apod_caption
 from domain.media.exceptions import MediaNotAvailable
 from infrastructure.http import fetch_json
 
@@ -33,6 +34,6 @@ class ApodProvider:
             self._translator.translate_to_ru(data["title"]),
             self._translator.translate_to_ru(data["explanation"][:APOD_MAX_DESCRIPTION_LENGTH]),
         )
-        caption = f"{day}\n\n{title}\n{description}"
+        caption = build_apod_caption(day, title, description, data.get("copyright"))
 
         return SinglePhotoPayload(image_url=data.get("hdurl", data["url"]), caption=caption)
