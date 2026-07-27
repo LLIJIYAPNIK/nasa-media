@@ -82,3 +82,14 @@ class FakeUserRepository:
 
     async def list_subscribed(self, source: MediaSourceKind) -> Sequence[User]:
         return [user for user in self._by_chat_id.values() if user.is_subscribed(source)]
+
+    async def list_with_birthday_set(self) -> Sequence[User]:
+        return [user for user in self._by_chat_id.values() if user.birthday is not None]
+
+
+class FakeGreetingSender:
+    def __init__(self) -> None:
+        self.sent: list[tuple[int, str]] = []
+
+    async def send_text(self, chat_id: int, text: str) -> None:
+        self.sent.append((chat_id, text))

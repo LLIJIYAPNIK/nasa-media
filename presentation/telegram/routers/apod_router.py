@@ -12,12 +12,13 @@ from application.media.deliver_media import DeliverMediaForDate
 from application.media.deliver_media_range import DeliverMediaForDateRange
 from application.subscriptions.manage_subscription import SetSubscription
 from application.users.register_user import GetOrCreateUser
+from application.users.set_birthday import SetBirthday
 from domain.media.exceptions import MediaNotAvailable
-from domain.media.value_objects import DateRange, InvalidMediaDate, MediaSourceKind
-from presentation.telegram.date_input import parse_requested_date
+from domain.media.value_objects import DateRange, InvalidMediaDate, MediaSourceKind, ensure_within_bounds
+from presentation.telegram.date_input import parse_birthday_date, parse_requested_date
 from presentation.telegram.keyboards.apod_kb import get_apod_kb
 from presentation.telegram.message_guards import require_bot, require_message
-from presentation.telegram.states import ApodCurrentDateForm, ApodDateRangeForm
+from presentation.telegram.states import ApodBirthdayForm, ApodCurrentDateForm, ApodDateRangeForm
 from presentation.telegram.subscribe_handler import register_subscribe_handlers
 
 
@@ -26,6 +27,7 @@ def build_apod_router(
     deliver_media_range: DeliverMediaForDateRange,
     set_subscription: SetSubscription,
     get_or_create_user: GetOrCreateUser,
+    set_birthday: SetBirthday,
     apod_lower_bound: date,
 ) -> Router:
     router = Router()
@@ -109,6 +111,41 @@ def build_apod_router(
             await message.answer(f"Готово, но NASA ещё не добавили изображения за: {missing}")
         else:
             await message.answer("Информация успешно сохранена!")
+
+    @router.callback_query(F.data == "cosmic_birthday")
+    async def cosmic_birthday(callback_query: CallbackQuery, state: FSMContext) -> None:
+        message = require_message(callback_query)
+        user = await get_or_create_user.execute(message.chat.id)
+        if user.birthday is not None:
+            await message.delete()
+            await deliver_to(message, message.chat.id, user.birthday)
+            return
+        await state.set_state(ApodBirthdayForm.date)
+        await message.delete()
+        await message.answer("Введите дату вашего рождения (ГГГГ-ММ-ДД):")
+
+    @router.message(StateFilter(ApodBirthdayForm.date))
+    async def finish_birthday(message: Message, state: FSMContext) -> None:
+        try:
+            birthday = parse_birthday_date(message.text)
+        except InvalidMediaDate as error:
+            await message.reply(str(error))
+            return
+
+        await set_birthday.execute(message.chat.id, birthday)
+        await state.clear()
+
+        try:
+            ensure_within_bounds(birthday, apod_lower_bound, date.today())
+        except InvalidMediaDate:
+            await message.answer(
+                "Спасибо! Дата сохранена — раз в год буду поздравлять с APOD-картинкой "
+                f"этого дня. Но NASA публикует APOD только с {apod_lower_bound.isoformat()}, "
+                "так что картинку именно за твой день рождения показать не получится."
+            )
+            return
+
+        await deliver_to(message, message.chat.id, birthday)
 
     register_subscribe_handlers(router, MediaSourceKind.APOD, set_subscription)
 

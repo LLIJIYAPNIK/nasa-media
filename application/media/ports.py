@@ -54,6 +54,13 @@ class AdminChatGateway(Protocol):
     async def forward_single(self, message_id: int, chat_id: int) -> None: ...
 
 
+class GreetingSender(Protocol):
+    """Личное текстовое сообщение пользователю — не через admin-чат: не
+    кешируется и не переиспользуется другими получателями."""
+
+    async def send_text(self, chat_id: int, text: str) -> None: ...
+
+
 class ApodRepository(Protocol):
     async def get_by_date(self, day: date_) -> ApodEntry | None: ...
 
@@ -78,3 +85,8 @@ class UserRepository(Protocol):
     async def save(self, user: User) -> None: ...
 
     async def list_subscribed(self, source: MediaSourceKind) -> Sequence[User]: ...
+
+    async def list_with_birthday_set(self) -> Sequence[User]:
+        """Дальнейшая фильтрация по месяцу/дню — доменным правилом
+        is_birthday_today, не здесь (см. domain/users/birthday.py)."""
+        ...

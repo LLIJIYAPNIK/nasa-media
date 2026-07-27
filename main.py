@@ -19,6 +19,8 @@ from application.media.deliver_media_range import DeliverMediaForDateRange
 from application.media.source_adapters import ApodSourceAdapter, EpicSourceAdapter
 from application.subscriptions.manage_subscription import SetSubscription
 from application.users.register_user import GetOrCreateUser
+from application.users.send_birthday_greetings import SendBirthdayGreetings
+from application.users.set_birthday import SetBirthday
 from domain.media.value_objects import MediaSourceKind
 from infrastructure.db.models import Base
 from infrastructure.db.repositories import SqlAlchemyApodRepository, SqlAlchemyEpicRepository, SqlAlchemyUserRepository
@@ -27,6 +29,7 @@ from infrastructure.nasa.apod_client import ApodProvider
 from infrastructure.nasa.epic_availability_client import EpicAvailabilityClient
 from infrastructure.nasa.epic_client import EpicProvider
 from infrastructure.telegram.admin_chat_gateway import TelegramAdminChatGateway
+from infrastructure.telegram.greeting_sender import TelegramGreetingSender
 from infrastructure.translation.ru_translator import GoogleRuTranslator
 from presentation.telegram.routers.apod_router import build_apod_router
 from presentation.telegram.routers.epic_router import build_epic_router
@@ -46,6 +49,7 @@ async def periodic_broadcast(
     refresh_epic_availability: RefreshEpicAvailability,
     broadcast_epic: BroadcastSubscribedUsers,
     broadcast_apod: BroadcastSubscribedUsers,
+    send_birthday_greetings: SendBirthdayGreetings,
 ) -> None:
     while True:
         today = date.today()
@@ -53,6 +57,7 @@ async def periodic_broadcast(
         await refresh_epic_availability.execute()
         await broadcast_epic.execute(today)
         await broadcast_apod.execute(today)
+        await send_birthday_greetings.execute(today)
         await asyncio.sleep(PERIODIC_UPDATE_INTERVAL_SECONDS)
 
 
@@ -80,6 +85,7 @@ async def main() -> None:
         epic_availability = EpicAvailabilityClient(http_session, config.NASA_API_KEY, config.NASA_EPIC_URL)
 
         admin_chat_gateway = TelegramAdminChatGateway(http_session, bot, config.ADMIN_CHAT_ID)
+        greeting_sender = TelegramGreetingSender(bot)
 
         deliver_apod = DeliverMediaForDate(ApodSourceAdapter(apod_provider, apod_repo, admin_chat_gateway))
         deliver_epic = DeliverMediaForDate(EpicSourceAdapter(epic_provider, epic_repo, admin_chat_gateway))
@@ -87,20 +93,29 @@ async def main() -> None:
 
         get_or_create_user = GetOrCreateUser(user_repo)
         set_subscription = SetSubscription(user_repo, get_or_create_user)
+        set_birthday = SetBirthday(user_repo, get_or_create_user)
         refresh_epic_availability = RefreshEpicAvailability(epic_availability, epic_repo)
         broadcast_apod = BroadcastSubscribedUsers(MediaSourceKind.APOD, deliver_apod, user_repo)
         broadcast_epic = BroadcastSubscribedUsers(MediaSourceKind.EPIC, deliver_epic, user_repo)
+        send_birthday_greetings = SendBirthdayGreetings(deliver_apod, user_repo, greeting_sender)
 
         dp.include_router(build_start_router(get_or_create_user))
         dp.include_router(
             build_apod_router(
-                deliver_apod, deliver_apod_range, set_subscription, get_or_create_user, config.APOD_LOWER_BOUND
+                deliver_apod,
+                deliver_apod_range,
+                set_subscription,
+                get_or_create_user,
+                set_birthday,
+                config.APOD_LOWER_BOUND,
             )
         )
         dp.include_router(build_epic_router(deliver_epic, set_subscription, get_or_create_user))
 
         await bot.delete_webhook(drop_pending_updates=True)
-        asyncio.create_task(periodic_broadcast(refresh_epic_availability, broadcast_epic, broadcast_apod))
+        asyncio.create_task(
+            periodic_broadcast(refresh_epic_availability, broadcast_epic, broadcast_apod, send_birthday_greetings)
+        )
 
         await set_bot_commands(bot)
         logger.info("Бот запущен и ожидает обновлений.")

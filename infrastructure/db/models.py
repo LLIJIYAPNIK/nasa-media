@@ -33,3 +33,4 @@ class UserModel(Base):
     chat_id: Mapped[int] = mapped_column(unique=True)
     apod_subscribed: Mapped[bool] = mapped_column(default=False)
     epic_subscribed: Mapped[bool] = mapped_column(default=False)
+    birthday: Mapped[date_ | None] = mapped_column(Date, default=None)
