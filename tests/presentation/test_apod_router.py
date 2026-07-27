@@ -17,6 +17,7 @@ def _router(set_subscription: AsyncMock) -> Router:
         deliver_media_range=AsyncMock(),
         set_subscription=set_subscription,
         get_or_create_user=AsyncMock(),
+        set_birthday=AsyncMock(),
         apod_lower_bound=date(1995, 6, 16),
     )
 

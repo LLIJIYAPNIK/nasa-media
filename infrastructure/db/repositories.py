@@ -77,7 +77,11 @@ class SqlAlchemyUserRepository(_SqlAlchemyRepository):
             await session.execute(
                 update(UserModel)
                 .where(UserModel.chat_id == user.chat_id)
-                .values(apod_subscribed=user.apod_subscribed, epic_subscribed=user.epic_subscribed)
+                .values(
+                    apod_subscribed=user.apod_subscribed,
+                    epic_subscribed=user.epic_subscribed,
+                    birthday=user.birthday,
+                )
             )
             await session.commit()
 
@@ -87,10 +91,16 @@ class SqlAlchemyUserRepository(_SqlAlchemyRepository):
             models = await session.scalars(select(UserModel).where(column.is_(True)))
             return [self._to_domain(model) for model in models]
 
+    async def list_with_birthday_set(self) -> Sequence[User]:
+        async with self._session_factory() as session:
+            models = await session.scalars(select(UserModel).where(UserModel.birthday.is_not(None)))
+            return [self._to_domain(model) for model in models]
+
     @staticmethod
     def _to_domain(model: UserModel) -> User:
         return User(
             chat_id=model.chat_id,
             apod_subscribed=model.apod_subscribed,
             epic_subscribed=model.epic_subscribed,
+            birthday=model.birthday,
         )

@@ -12,6 +12,7 @@ def get_apod_kb(is_subscribed: bool) -> InlineKeyboardMarkup:
             [InlineKeyboardButton(text="Несколько дат", callback_data="few_dates")],
             [InlineKeyboardButton(text="Определенная дата", callback_data="current_date")],
             [InlineKeyboardButton(text="Сегодня", callback_data="today_date")],
+            [InlineKeyboardButton(text="Мой космический день рождения", callback_data="cosmic_birthday")],
             [subscription_button],
             [InlineKeyboardButton(text="Назад", callback_data="back_to_start")],
         ]

@@ -10,5 +10,9 @@ class ApodDateRangeForm(StatesGroup):
     end_date = State()
 
 
+class ApodBirthdayForm(StatesGroup):
+    date = State()
+
+
 class EpicDateForm(StatesGroup):
     date = State()

@@ -55,3 +55,21 @@ async def test_user_repository_subscription_roundtrip(session_factory):
 
     unsubscribed = await repo.list_subscribed(MediaSourceKind.EPIC)
     assert unsubscribed == []
+
+
+async def test_user_repository_birthday_roundtrip_and_listing(session_factory):
+    repo = SqlAlchemyUserRepository(session_factory)
+
+    with_birthday = await repo.add(chat_id=1)
+    without_birthday = await repo.add(chat_id=2)
+    assert with_birthday.birthday is None
+
+    await repo.save(with_birthday.with_birthday(date(1990, 5, 20)))
+
+    fetched = await repo.get_by_chat_id(1)
+    assert fetched is not None
+    assert fetched.birthday == date(1990, 5, 20)
+
+    with_birthday_set = await repo.list_with_birthday_set()
+    assert [u.chat_id for u in with_birthday_set] == [1]
+    assert without_birthday.chat_id not in [u.chat_id for u in with_birthday_set]
