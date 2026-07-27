@@ -34,6 +34,27 @@ async def test_apod_provider_builds_payload_with_translated_caption():
     assert "[ru] Text" in payload.caption
 
 
+async def test_apod_provider_appends_copyright_attribution_when_present():
+    session = FakeClientSession(
+        {
+            f"{APOD_URL}?date=2024-01-01&api_key=key": FakeResponse(
+                json_data={
+                    "media_type": "image",
+                    "url": "http://img",
+                    "title": "Title",
+                    "explanation": "Text",
+                    "copyright": "Jane Photographer",
+                }
+            )
+        }
+    )
+    provider = ApodProvider(session, "key", APOD_URL, FakeTranslator())
+
+    payload = await provider.fetch(date(2024, 1, 1))
+
+    assert payload.caption.endswith("© Jane Photographer")
+
+
 async def test_apod_provider_prefers_hdurl_when_present():
     session = FakeClientSession(
         {
