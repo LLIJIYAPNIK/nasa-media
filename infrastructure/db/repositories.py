@@ -5,12 +5,11 @@ from datetime import date as date_
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
-from sqlalchemy.orm import selectinload
 
-from domain.media.entities import ApodEntry, EpicDay, EpicFrame
+from domain.media.entities import ApodEntry, EpicDay
 from domain.media.value_objects import MediaSourceKind
 from domain.users.entities import User
-from infrastructure.db.models import ApodModel, EpicDayModel, EpicFrameModel, UserModel
+from infrastructure.db.models import ApodModel, EpicDayModel, UserModel
 
 
 class _SqlAlchemyRepository:
@@ -34,10 +33,7 @@ class SqlAlchemyEpicRepository(_SqlAlchemyRepository):
     async def get_by_date(self, day: date_) -> EpicDay | None:
         async with self._session_factory() as session:
             model = await self._get_model(session, day)
-            if model is None:
-                return None
-            frames = tuple(EpicFrame(f.telegram_file_id, f.position) for f in model.frames)
-            return EpicDay(date=model.date, frames=frames)
+            return EpicDay(date=model.date, gif_message_id=model.gif_message_id) if model else None
 
     async def save(self, day: EpicDay) -> None:
         async with self._session_factory() as session:
@@ -45,9 +41,7 @@ class SqlAlchemyEpicRepository(_SqlAlchemyRepository):
             if model is None:
                 model = EpicDayModel(date=day.date)
                 session.add(model)
-            model.frames = [
-                EpicFrameModel(telegram_file_id=frame.telegram_file_id, position=frame.position) for frame in day.frames
-            ]
+            model.gif_message_id = day.gif_message_id
             await session.commit()
 
     async def ensure_known_dates(self, days: Sequence[date_]) -> None:
@@ -62,9 +56,7 @@ class SqlAlchemyEpicRepository(_SqlAlchemyRepository):
 
     @staticmethod
     async def _get_model(session: AsyncSession, day: date_) -> EpicDayModel | None:
-        return await session.scalar(
-            select(EpicDayModel).where(EpicDayModel.date == day).options(selectinload(EpicDayModel.frames))
-        )
+        return await session.scalar(select(EpicDayModel).where(EpicDayModel.date == day))
 
 
 class SqlAlchemyUserRepository(_SqlAlchemyRepository):

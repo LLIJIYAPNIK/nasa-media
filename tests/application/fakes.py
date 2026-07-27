@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from datetime import date as date_
 
-from application.media.ports import CachedMessageRef, MediaPayload, SingleMessageRef
+from application.media.ports import CachedMessageRef, MediaPayload
 from domain.media.entities import ApodEntry, EpicDay
 from domain.media.exceptions import MediaNotAvailable
 from domain.media.value_objects import MediaSourceKind
@@ -53,10 +53,9 @@ class FakeEpicRepository:
 
 class FakeAdminChatGateway:
     def __init__(self, ref: CachedMessageRef | None = None) -> None:
-        self.ref: CachedMessageRef = ref or SingleMessageRef(message_id=1)
+        self.ref: CachedMessageRef = ref or CachedMessageRef(message_id=1)
         self.published: list[MediaPayload] = []
         self.forwarded_single: list[tuple[int, int]] = []
-        self.forwarded_group: list[tuple[tuple, int]] = []
 
     async def publish(self, payload: MediaPayload) -> CachedMessageRef:
         self.published.append(payload)
@@ -64,9 +63,6 @@ class FakeAdminChatGateway:
 
     async def forward_single(self, message_id: int, chat_id: int) -> None:
         self.forwarded_single.append((message_id, chat_id))
-
-    async def forward_group(self, frame_file_ids: Sequence[str], chat_id: int) -> None:
-        self.forwarded_group.append((tuple(frame_file_ids), chat_id))
 
 
 class FakeUserRepository:

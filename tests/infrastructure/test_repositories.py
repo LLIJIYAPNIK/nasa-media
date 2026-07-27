@@ -1,6 +1,6 @@
 from datetime import date
 
-from domain.media.entities import ApodEntry, EpicDay, EpicFrame
+from domain.media.entities import ApodEntry, EpicDay
 from domain.media.value_objects import MediaSourceKind
 from infrastructure.db.repositories import SqlAlchemyApodRepository, SqlAlchemyEpicRepository, SqlAlchemyUserRepository
 
@@ -24,19 +24,21 @@ async def test_epic_repository_ensure_known_dates_is_idempotent(session_factory)
     await repo.ensure_known_dates([day])
 
     epic_day = await repo.get_by_date(day)
-    assert epic_day.frames == ()
+    assert epic_day is not None
+    assert epic_day.gif_message_id is None
     assert epic_day.is_cached is False
 
 
-async def test_epic_repository_save_frames_in_order(session_factory):
+async def test_epic_repository_save_gif_message_id(session_factory):
     repo = SqlAlchemyEpicRepository(session_factory)
     day = date(2024, 1, 1)
     await repo.ensure_known_dates([day])
 
-    await repo.save(EpicDay(date=day, frames=(EpicFrame("file-a", 0), EpicFrame("file-b", 1))))
+    await repo.save(EpicDay(date=day, gif_message_id=123))
 
     epic_day = await repo.get_by_date(day)
-    assert [frame.telegram_file_id for frame in epic_day.frames] == ["file-a", "file-b"]
+    assert epic_day is not None
+    assert epic_day.gif_message_id == 123
     assert epic_day.is_cached is True
 
 

@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 from aiogram.exceptions import TelegramBadRequest
 from PIL import Image
 
-from application.media.ports import PhotoGroupPayload, SinglePhotoPayload
+from application.media.ports import AnimationPayload, SinglePhotoPayload
 from infrastructure.telegram.admin_chat_gateway import TelegramAdminChatGateway
 from tests.infrastructure.fake_aiohttp import FakeClientSession, FakeResponse
 
@@ -42,16 +42,16 @@ async def test_publish_single_falls_back_to_download_when_telegram_rejects_direc
     assert bot.send_photo.await_count == 2
 
 
-async def test_publish_group_sends_media_group_and_returns_frame_file_ids():
-    fake_messages = [MagicMock(photo=[MagicMock(file_id="file-a")]), MagicMock(photo=[MagicMock(file_id="file-b")])]
+async def test_publish_animation_sends_gif_and_returns_message_id():
     bot = MagicMock()
-    bot.send_media_group = AsyncMock(return_value=fake_messages)
+    bot.send_animation = AsyncMock(return_value=MagicMock(message_id=77))
     gateway = TelegramAdminChatGateway(FakeClientSession({}), bot, ADMIN_CHAT_ID)
-    payload = PhotoGroupPayload(images=[_fake_jpeg_bytes(), _fake_jpeg_bytes()])
+    payload = AnimationPayload(gif_bytes=b"gif-bytes")
 
     ref = await gateway.publish(payload)
 
-    assert ref.frame_file_ids == ("file-a", "file-b")
+    assert ref.message_id == 77
+    assert bot.send_animation.await_args.kwargs["chat_id"] == ADMIN_CHAT_ID
 
 
 async def test_forward_single_copies_message_from_admin_chat():
@@ -62,15 +62,3 @@ async def test_forward_single_copies_message_from_admin_chat():
     await gateway.forward_single(message_id=5, chat_id=123)
 
     bot.copy_message.assert_awaited_once_with(chat_id=123, from_chat_id=ADMIN_CHAT_ID, message_id=5)
-
-
-async def test_forward_group_resends_media_group_by_file_id():
-    bot = MagicMock()
-    bot.send_media_group = AsyncMock()
-    gateway = TelegramAdminChatGateway(FakeClientSession({}), bot, ADMIN_CHAT_ID)
-
-    await gateway.forward_group(("file-a", "file-b"), chat_id=123)
-
-    _, kwargs = bot.send_media_group.await_args
-    assert kwargs["chat_id"] == 123
-    assert [media.media for media in kwargs["media"]] == ["file-a", "file-b"]

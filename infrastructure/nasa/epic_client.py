@@ -5,8 +5,9 @@ from datetime import date as date_
 
 import aiohttp
 
-from application.media.ports import PhotoGroupPayload
+from application.media.ports import AnimationPayload
 from domain.media.exceptions import MediaNotAvailable
+from infrastructure.files.gif_builder import build_gif
 from infrastructure.http import fetch_bytes, fetch_json
 
 # Фиксированный публичный путь архива NASA EPIC — как и в старом коде, не
@@ -26,7 +27,7 @@ class EpicProvider:
         self._api_key = api_key
         self._api_base_url = api_base_url
 
-    async def fetch(self, day: date_) -> PhotoGroupPayload:
+    async def fetch(self, day: date_) -> AnimationPayload:
         frames_meta = await fetch_json(
             self._session, f"{self._api_base_url}/date/{day.isoformat()}", {"api_key": self._api_key}
         )
@@ -34,7 +35,8 @@ class EpicProvider:
             raise MediaNotAvailable(f"NASA EPIC за {day} — нет кадров")
 
         images = await asyncio.gather(*(self._download_frame(day, frame) for frame in frames_meta))
-        return PhotoGroupPayload(images=images)
+        gif_bytes = await build_gif(images)
+        return AnimationPayload(gif_bytes=gif_bytes)
 
     async def _download_frame(self, day: date_, frame_meta: dict) -> bytes:
         image_name = frame_meta["image"]
