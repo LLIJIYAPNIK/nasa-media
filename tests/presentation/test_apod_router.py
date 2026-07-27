@@ -1,14 +1,17 @@
 from datetime import date
+from typing import cast
 from unittest.mock import AsyncMock
 
 import pytest
+from aiogram import Router
+from aiogram.types import CallbackQuery
 
 from domain.media.value_objects import MediaSourceKind
 from presentation.telegram.routers.apod_router import build_apod_router
 from tests.presentation.fake_telegram import FakeCallbackQuery
 
 
-def _router(set_subscription: AsyncMock) -> object:
+def _router(set_subscription: AsyncMock) -> Router:
     return build_apod_router(
         deliver_media=AsyncMock(),
         deliver_media_range=AsyncMock(),
@@ -32,7 +35,7 @@ async def test_subscribe_callback_calls_use_case_with_correct_source_and_value(
     router = _router(set_subscription)
     callback_query = FakeCallbackQuery(data=callback_data, chat_id=555)
 
-    await router.callback_query.trigger(callback_query)
+    await router.callback_query.trigger(cast(CallbackQuery, callback_query))
 
     set_subscription.execute.assert_awaited_once_with(555, MediaSourceKind.APOD, expected_value)
     callback_query.message.delete.assert_awaited_once()

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import date as date_
-from typing import Sequence
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -46,8 +46,7 @@ class SqlAlchemyEpicRepository(_SqlAlchemyRepository):
                 model = EpicDayModel(date=day.date)
                 session.add(model)
             model.frames = [
-                EpicFrameModel(telegram_file_id=frame.telegram_file_id, position=frame.position)
-                for frame in day.frames
+                EpicFrameModel(telegram_file_id=frame.telegram_file_id, position=frame.position) for frame in day.frames
             ]
             await session.commit()
 

@@ -23,7 +23,7 @@ class EpicDayModel(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     date: Mapped[date_] = mapped_column(Date, unique=True)
-    frames: Mapped[list["EpicFrameModel"]] = relationship(
+    frames: Mapped[list[EpicFrameModel]] = relationship(
         back_populates="epic_day",
         order_by="EpicFrameModel.position",
         cascade="all, delete-orphan",

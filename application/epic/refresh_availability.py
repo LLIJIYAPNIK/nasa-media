@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import date as date_
-from typing import Protocol, Sequence
+from typing import Protocol
 
 from application.media.ports import EpicRepository
 

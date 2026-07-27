@@ -16,6 +16,7 @@ from domain.media.exceptions import MediaNotAvailable
 from domain.media.value_objects import DateRange, InvalidMediaDate, MediaSourceKind
 from presentation.telegram.date_input import parse_requested_date
 from presentation.telegram.keyboards.apod_kb import get_apod_kb
+from presentation.telegram.message_guards import require_bot, require_message
 from presentation.telegram.states import ApodCurrentDateForm, ApodDateRangeForm
 from presentation.telegram.subscribe_handler import register_subscribe_handlers
 
@@ -30,7 +31,7 @@ def build_apod_router(
     router = Router()
 
     async def deliver_to(message: Message, chat_id: int, day: date) -> None:
-        async with ChatActionSender.upload_photo(bot=message.bot, chat_id=chat_id):
+        async with ChatActionSender.upload_photo(bot=require_bot(message), chat_id=chat_id):
             try:
                 await deliver_media.execute(day, chat_id)
             except MediaNotAvailable:
@@ -38,22 +39,25 @@ def build_apod_router(
 
     @router.callback_query(F.data == "apod")
     async def cmd_apod(callback_query: CallbackQuery) -> None:
-        await callback_query.message.delete()
-        user = await get_or_create_user.execute(callback_query.message.chat.id)
-        await callback_query.message.answer(
+        message = require_message(callback_query)
+        await message.delete()
+        user = await get_or_create_user.execute(message.chat.id)
+        await message.answer(
             "APOD - Astronomy Picture of the Day\n\nВыберите вариант:",
             reply_markup=get_apod_kb(user.apod_subscribed),
         )
 
     @router.callback_query(F.data == "today_date")
     async def get_today_date(callback_query: CallbackQuery) -> None:
-        await deliver_to(callback_query.message, callback_query.message.chat.id, date.today())
+        message = require_message(callback_query)
+        await deliver_to(message, message.chat.id, date.today())
 
     @router.callback_query(F.data == "current_date")
     async def get_current_date_data(callback_query: CallbackQuery, state: FSMContext) -> None:
+        message = require_message(callback_query)
         await state.set_state(ApodCurrentDateForm.current_date)
-        await callback_query.message.delete()
-        await callback_query.message.answer("Введите дату (ГГГГ-ММ-ДД):")
+        await message.delete()
+        await message.answer("Введите дату (ГГГГ-ММ-ДД):")
 
     @router.message(StateFilter(ApodCurrentDateForm.current_date))
     async def finish_current_date(message: Message, state: FSMContext) -> None:
@@ -67,9 +71,10 @@ def build_apod_router(
 
     @router.callback_query(F.data == "few_dates")
     async def get_few_dates(callback_query: CallbackQuery, state: FSMContext) -> None:
+        message = require_message(callback_query)
         await state.set_state(ApodDateRangeForm.start_date)
-        await callback_query.message.delete()
-        await callback_query.message.answer(
+        await message.delete()
+        await message.answer(
             "Чтобы получить фото во временном промежутке нужно заполнить данные для начала и конца "
             "промежутка.\nДавайте начнём: укажите начало временного промежутка:"
         )
@@ -95,7 +100,7 @@ def build_apod_router(
             await message.reply(str(error))
             return
 
-        async with ChatActionSender.upload_photo(bot=message.bot, chat_id=message.chat.id):
+        async with ChatActionSender.upload_photo(bot=require_bot(message), chat_id=message.chat.id):
             unavailable_dates = await deliver_media_range.execute(date_range, message.chat.id)
 
         await state.clear()

@@ -85,8 +85,8 @@ async def main() -> None:
         deliver_epic = DeliverMediaForDate(EpicSourceAdapter(epic_provider, epic_repo, admin_chat_gateway))
         deliver_apod_range = DeliverMediaForDateRange(deliver_apod)
 
-        set_subscription = SetSubscription(user_repo)
         get_or_create_user = GetOrCreateUser(user_repo)
+        set_subscription = SetSubscription(user_repo, get_or_create_user)
         refresh_epic_availability = RefreshEpicAvailability(epic_availability, epic_repo)
         broadcast_apod = BroadcastSubscribedUsers(MediaSourceKind.APOD, deliver_apod, user_repo)
         broadcast_epic = BroadcastSubscribedUsers(MediaSourceKind.EPIC, deliver_epic, user_repo)
