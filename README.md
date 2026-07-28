@@ -24,6 +24,7 @@ domain/               — чистые правила, без I/O
 application/          — use-case'ы
 infrastructure/        — БД, NASA API, Telegram, файлы, перевод
 presentation/telegram/ — aiogram-роутеры
+presentation/web/      — FastAPI-приложение (главная страница, см. docs/tz/TZ-web.md)
 ```
 
 ## Установка
@@ -42,8 +43,16 @@ uv sync
 
 ## Запуск
 
+Бот:
+
 ```
 uv run python main.py
+```
+
+Веб-интерфейс (отдельный ASGI-процесс, тот же `.env`, см. docs/tz/TZ-web.md):
+
+```
+uv run uvicorn presentation.web.app:app --reload
 ```
 
 ## Проверки

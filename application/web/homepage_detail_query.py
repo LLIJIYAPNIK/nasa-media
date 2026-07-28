@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import date as date_
 from typing import Protocol
@@ -11,12 +12,10 @@ from domain.digest.size_comparison import compare_to_familiar_object
 from domain.media.exceptions import MediaNotAvailable
 from infrastructure.nasa.apod_client import ApodData
 
-KNOWN_HOMEPAGE_DETAIL_KINDS = ("apod", "asteroid", "space-weather", "earth-event")
-
 
 class UnknownHomepageDetailKind(Exception):
-    """Кидается для kind вне KNOWN_HOMEPAGE_DETAIL_KINDS — роутер превращает
-    это в 404 с понятным телом (см. docs/tz/TZ-web.md, «Роуты»)."""
+    """Кидается для kind вне известных 4 — роутер превращает это в 404 с
+    понятным телом (см. docs/tz/TZ-web.md, «Роуты»)."""
 
 
 class ApodRawClient(Protocol):
@@ -66,17 +65,18 @@ class GetHomepageDetail:
         self._space_weather_client = space_weather_client
         self._near_earth_object_client = near_earth_object_client
         self._natural_event_client = natural_event_client
+        self._handlers: dict[str, Callable[[date_], Awaitable[HomepageDetail]]] = {
+            "apod": self._apod_detail,
+            "asteroid": self._asteroid_detail,
+            "space-weather": self._space_weather_detail,
+            "earth-event": self._earth_event_detail,
+        }
 
     async def execute(self, kind: str, today: date_) -> HomepageDetail:
-        if kind == "apod":
-            return await self._apod_detail(today)
-        if kind == "asteroid":
-            return await self._asteroid_detail(today)
-        if kind == "space-weather":
-            return await self._space_weather_detail(today)
-        if kind == "earth-event":
-            return await self._earth_event_detail()
-        raise UnknownHomepageDetailKind(kind)
+        handler = self._handlers.get(kind)
+        if handler is None:
+            raise UnknownHomepageDetailKind(kind)
+        return await handler(today)
 
     async def _apod_detail(self, today: date_) -> HomepageDetail:
         try:
@@ -123,7 +123,9 @@ class GetHomepageDetail:
             space_weather_issued_at=event.issued_at.isoformat(),
         )
 
-    async def _earth_event_detail(self) -> HomepageDetail:
+    async def _earth_event_detail(self, _today: date_) -> HomepageDetail:
+        # EONET не фильтруется по дате (см. application/digest/ports.py) —
+        # параметр только ради единой сигнатуры обработчиков в self._handlers.
         events = await self._natural_event_client.fetch_recent()
         event = pick_latest_earth_event(events)
         if event is None:
