@@ -4,6 +4,8 @@ from collections.abc import Sequence
 from datetime import date as date_
 
 from application.media.ports import CachedMessageRef, MediaPayload
+from domain.digest.entities import DigestEntry
+from domain.digest.value_objects import AsteroidHighlight, EarthEventHighlight, SpaceWeatherHighlight
 from domain.media.entities import ApodEntry, EpicDay
 from domain.media.exceptions import MediaNotAvailable
 from domain.media.value_objects import MediaSourceKind
@@ -93,3 +95,44 @@ class FakeGreetingSender:
 
     async def send_text(self, chat_id: int, text: str) -> None:
         self.sent.append((chat_id, text))
+
+
+class FakeSpaceWeatherClient:
+    def __init__(self, events: Sequence[SpaceWeatherHighlight] | None = None) -> None:
+        self.events = events or []
+        self.calls: list[date_] = []
+
+    async def fetch_for_day(self, day: date_) -> Sequence[SpaceWeatherHighlight]:
+        self.calls.append(day)
+        return self.events
+
+
+class FakeNearEarthObjectClient:
+    def __init__(self, asteroids: Sequence[AsteroidHighlight] | None = None) -> None:
+        self.asteroids = asteroids or []
+        self.calls: list[date_] = []
+
+    async def fetch_for_day(self, day: date_) -> Sequence[AsteroidHighlight]:
+        self.calls.append(day)
+        return self.asteroids
+
+
+class FakeNaturalEventClient:
+    def __init__(self, events: Sequence[EarthEventHighlight] | None = None) -> None:
+        self.events = events or []
+        self.calls = 0
+
+    async def fetch_recent(self) -> Sequence[EarthEventHighlight]:
+        self.calls += 1
+        return self.events
+
+
+class FakeDigestRepository:
+    def __init__(self) -> None:
+        self._storage: dict[date_, DigestEntry] = {}
+
+    async def get_by_date(self, day: date_) -> DigestEntry | None:
+        return self._storage.get(day)
+
+    async def save(self, entry: DigestEntry) -> None:
+        self._storage[entry.date] = entry
