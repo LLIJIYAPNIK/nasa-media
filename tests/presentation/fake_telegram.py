@@ -17,3 +17,9 @@ class FakeCallbackQuery:
     def __init__(self, data: str, chat_id: int) -> None:
         self.data = data
         self.message = FakeMessage(chat_id)
+
+
+class FakeInlineQuery:
+    def __init__(self, query: str) -> None:
+        self.query = query
+        self.answer = AsyncMock()
