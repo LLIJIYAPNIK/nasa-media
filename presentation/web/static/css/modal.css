@@ -49,8 +49,9 @@
   border: none;
   border-radius: var(--radius-lg);
   padding: 0;
-  max-width: 480px;
-  width: calc(100% - 48px);
+  width: min(70vw, 900px);
+  max-height: 78vh;
+  overflow-y: auto;
   color: var(--color-text);
   background: linear-gradient(160deg, rgba(20, 26, 38, .96), rgba(6, 11, 22, .98) 65%);
   backdrop-filter: var(--blur-card);
@@ -114,4 +115,11 @@
 
 .detail-modal-body dd {
   margin: 0;
+}
+
+@media (max-width: 768px) {
+  .detail-modal {
+    width: 92vw;
+    max-height: 85vh;
+  }
 }
