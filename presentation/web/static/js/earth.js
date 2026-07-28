@@ -10,6 +10,20 @@ const TEXTURE_BASE = "/static/textures/";
 const SUBSOLAR_REFRESH_MS = 5 * 60 * 1000;
 const POINTER_TILT_MAX = 0.22;
 const POINTER_LERP = 0.04;
+const DESKTOP_BREAKPOINT_PX = 768;
+// На больших экранах Земля должна выглядеть примерно вдвое крупнее и
+// смещённой вправо настолько, чтобы целый шар не помещался в кадр (см.
+// docs/tz/web-homepage-fixes-round4). На мобильных (тот же брейкпоинт, что
+// и .earth-mount в earth.css) — прежний масштаб/центровка, там Земля и так
+// приглушена и не должна расти вместе с десктопом.
+const CAMERA_Z_DESKTOP = 1.8;
+const CAMERA_Z_MOBILE = 3.2;
+const EARTH_OFFSET_X_DESKTOP = 0.6;
+const EARTH_OFFSET_X_MOBILE = 0;
+
+function isDesktopViewport() {
+  return window.innerWidth > DESKTOP_BREAKPOINT_PX;
+}
 
 function prefersReducedMotion() {
   return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
@@ -96,8 +110,11 @@ function initEarth() {
   }
 
   const scene = new THREE.Scene();
+  // z/x ниже — временные значения до первого resize() (см. ниже), который
+  // выставляет их по реальной ширине viewport и пересчитывает при переходе
+  // через мобильный брейкпоинт.
   const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
-  camera.position.z = 3.2;
+  camera.position.z = CAMERA_Z_MOBILE;
 
   const textureLoader = new THREE.TextureLoader();
   const colorMap = textureLoader.load(`${TEXTURE_BASE}color.jpg`);
@@ -150,8 +167,13 @@ function initEarth() {
   earth.add(clouds);
 
   scene.add(earth);
-  scene.add(new THREE.AmbientLight(0x334466, 0.5));
-  const sun = new THREE.DirectionalLight(0xffffff, 1.3);
+  // Яркость поднята (docs/tz/web-homepage-fixes-round4) — на фоне
+  // насыщенного вихря round 3 тёмная (ночная) сторона Земли читалась почти
+  // чёрным пятном рядом со светлым небом. AmbientLight светлее заливает
+  // тени, не отменяя сам эффект ночной стороны (свечение городов — отдельный
+  // ShaderMaterial выше, от сцены не зависит).
+  scene.add(new THREE.AmbientLight(0x5a72a8, 1.2));
+  const sun = new THREE.DirectionalLight(0xffffff, 1.9);
   sun.position.copy(sunDirection);
   scene.add(sun);
 
@@ -162,6 +184,8 @@ function initEarth() {
       return;
     }
     camera.aspect = width / height;
+    camera.position.z = isDesktopViewport() ? CAMERA_Z_DESKTOP : CAMERA_Z_MOBILE;
+    earth.position.x = isDesktopViewport() ? EARTH_OFFSET_X_DESKTOP : EARTH_OFFSET_X_MOBILE;
     camera.updateProjectionMatrix();
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(width, height, false);

@@ -26,14 +26,15 @@
 .earth-fallback {
   position: absolute;
   top: 50%;
-  right: -15%;
+  right: -55%;
   transform: translateY(-50%);
-  width: 90%;
+  width: 160%;
   aspect-ratio: 1 / 1;
   border-radius: 50%;
   background-image: url("/static/textures/color.jpg");
   background-size: 220% auto;
   background-position: 0 50%;
+  filter: brightness(1.2);
   box-shadow: 0 0 160px rgba(59, 130, 246, .25);
 }
 
@@ -51,5 +52,10 @@
   #earth-canvas,
   .earth-fallback {
     right: -25%;
+  }
+
+  .earth-fallback {
+    width: 90%;
+    filter: none;
   }
 }
