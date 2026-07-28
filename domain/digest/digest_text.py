@@ -36,6 +36,15 @@ def pick_closest_asteroid(asteroids: Sequence[AsteroidHighlight]) -> AsteroidHig
     return min(asteroids, key=lambda asteroid: asteroid.miss_distance_km)
 
 
+def pick_largest_asteroid(asteroids: Sequence[AsteroidHighlight]) -> AsteroidHighlight | None:
+    """Для еженедельных итогов — "самое впечатляющее", не "что происходит
+    сегодня": огромный далёкий астероид эффектнее маленького близкого (см.
+    docs/tz/TZ-weekly-highlights.md)."""
+    if not asteroids:
+        return None
+    return max(asteroids, key=lambda asteroid: asteroid.diameter_max_m)
+
+
 def pick_latest_earth_event(events: Sequence[EarthEventHighlight]) -> EarthEventHighlight | None:
     if not events:
         return None

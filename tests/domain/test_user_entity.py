@@ -51,12 +51,36 @@ def test_with_subscription_sets_digest_field():
     assert updated.digest_subscribed is True
 
 
-@pytest.mark.parametrize("source", [MediaSourceKind.APOD, MediaSourceKind.EPIC, MediaSourceKind.DIGEST])
+@pytest.mark.parametrize("source", list(MediaSourceKind))
 def test_with_subscription_only_touches_the_targeted_source(source: MediaSourceKind):
-    user = User(chat_id=1, apod_subscribed=True, epic_subscribed=True, digest_subscribed=True)
+    user = User(
+        chat_id=1,
+        apod_subscribed=True,
+        epic_subscribed=True,
+        digest_subscribed=True,
+        weekly_highlights_subscribed=True,
+    )
 
     updated = user.with_subscription(source, False)
 
     for other_source in MediaSourceKind:
         expected = False if other_source is source else True
         assert updated.is_subscribed(other_source) is expected
+
+
+# --- MediaSourceKind.WEEKLY_HIGHLIGHTS (regression coverage — fourth source) ---
+
+
+def test_is_subscribed_reads_weekly_highlights_field():
+    user = User(chat_id=1, weekly_highlights_subscribed=True)
+
+    assert user.is_subscribed(MediaSourceKind.WEEKLY_HIGHLIGHTS) is True
+
+
+def test_with_subscription_sets_weekly_highlights_field():
+    user = User(chat_id=1)
+
+    updated = user.with_subscription(MediaSourceKind.WEEKLY_HIGHLIGHTS, True)
+
+    assert user.weekly_highlights_subscribed is False
+    assert updated.weekly_highlights_subscribed is True
