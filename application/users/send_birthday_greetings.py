@@ -6,6 +6,7 @@ from application.media.deliver_media import DeliverMediaForDate
 from application.media.ports import GreetingSender, UserRepository
 from domain.media.exceptions import MediaNotAvailable
 from domain.users.birthday import is_birthday_today
+from domain.users.cosmic_facts import build_cosmic_facts_text
 
 GREETING_TEXT = (
     "🎉 С днём рождения! Вот такое небо видела NASA сегодня — в твой день.\n\n"
@@ -35,3 +36,4 @@ class SendBirthdayGreetings:
             except MediaNotAvailable:
                 continue
             await self._greeting_sender.send_text(user.chat_id, GREETING_TEXT)
+            await self._greeting_sender.send_text(user.chat_id, build_cosmic_facts_text(user.birthday, today))
