@@ -187,9 +187,7 @@ WEEK_END = date(2026, 8, 2)
 
 def test_build_weekly_highlights_lines_uses_largest_asteroid_wording():
     text = "\n".join(
-        build_weekly_highlights_lines(
-            WEEK_START, WEEK_END, None, _asteroid("Huge", 200_000, diameter_max_m=900), None
-        )
+        build_weekly_highlights_lines(WEEK_START, WEEK_END, None, _asteroid("Huge", 200_000, diameter_max_m=900), None)
     )
 
     assert "Самый крупный астероид недели" in text
