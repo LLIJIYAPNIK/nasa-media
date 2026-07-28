@@ -15,6 +15,7 @@ from application.users.register_user import GetOrCreateUser
 from application.users.set_birthday import SetBirthday
 from domain.media.exceptions import MediaNotAvailable
 from domain.media.value_objects import DateRange, InvalidMediaDate, MediaSourceKind, ensure_within_bounds
+from domain.users.cosmic_facts import build_cosmic_facts_text
 from presentation.telegram.date_input import parse_birthday_date, parse_requested_date
 from presentation.telegram.keyboards.apod_kb import get_apod_kb
 from presentation.telegram.message_guards import require_bot, require_message
@@ -119,6 +120,7 @@ def build_apod_router(
         if user.birthday is not None:
             await message.delete()
             await deliver_to(message, message.chat.id, user.birthday)
+            await message.answer(build_cosmic_facts_text(user.birthday, date.today()))
             return
         await state.set_state(ApodBirthdayForm.date)
         await message.delete()
@@ -146,6 +148,7 @@ def build_apod_router(
             return
 
         await deliver_to(message, message.chat.id, birthday)
+        await message.answer(build_cosmic_facts_text(birthday, date.today()))
 
     register_subscribe_handlers(router, MediaSourceKind.APOD, set_subscription)
 
