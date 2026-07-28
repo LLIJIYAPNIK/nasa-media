@@ -5,11 +5,19 @@ from datetime import date as date_
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.orm import InstrumentedAttribute
 
+from domain.digest.entities import DigestEntry
 from domain.media.entities import ApodEntry, EpicDay
 from domain.media.value_objects import MediaSourceKind
 from domain.users.entities import User
-from infrastructure.db.models import ApodModel, EpicDayModel, UserModel
+from infrastructure.db.models import ApodModel, DigestModel, EpicDayModel, UserModel
+
+_SUBSCRIPTION_COLUMNS: dict[MediaSourceKind, InstrumentedAttribute[bool]] = {
+    MediaSourceKind.APOD: UserModel.apod_subscribed,
+    MediaSourceKind.EPIC: UserModel.epic_subscribed,
+    MediaSourceKind.DIGEST: UserModel.digest_subscribed,
+}
 
 
 class _SqlAlchemyRepository:
@@ -59,6 +67,18 @@ class SqlAlchemyEpicRepository(_SqlAlchemyRepository):
         return await session.scalar(select(EpicDayModel).where(EpicDayModel.date == day))
 
 
+class SqlAlchemyDigestRepository(_SqlAlchemyRepository):
+    async def get_by_date(self, day: date_) -> DigestEntry | None:
+        async with self._session_factory() as session:
+            model = await session.scalar(select(DigestModel).where(DigestModel.date == day))
+            return DigestEntry(date=model.date, message_id=model.message_id) if model else None
+
+    async def save(self, entry: DigestEntry) -> None:
+        async with self._session_factory() as session:
+            session.add(DigestModel(date=entry.date, message_id=entry.message_id))
+            await session.commit()
+
+
 class SqlAlchemyUserRepository(_SqlAlchemyRepository):
     async def get_by_chat_id(self, chat_id: int) -> User | None:
         async with self._session_factory() as session:
@@ -80,13 +100,14 @@ class SqlAlchemyUserRepository(_SqlAlchemyRepository):
                 .values(
                     apod_subscribed=user.apod_subscribed,
                     epic_subscribed=user.epic_subscribed,
+                    digest_subscribed=user.digest_subscribed,
                     birthday=user.birthday,
                 )
             )
             await session.commit()
 
     async def list_subscribed(self, source: MediaSourceKind) -> Sequence[User]:
-        column = UserModel.apod_subscribed if source is MediaSourceKind.APOD else UserModel.epic_subscribed
+        column = _SUBSCRIPTION_COLUMNS[source]
         async with self._session_factory() as session:
             models = await session.scalars(select(UserModel).where(column.is_(True)))
             return [self._to_domain(model) for model in models]
@@ -102,5 +123,6 @@ class SqlAlchemyUserRepository(_SqlAlchemyRepository):
             chat_id=model.chat_id,
             apod_subscribed=model.apod_subscribed,
             epic_subscribed=model.epic_subscribed,
+            digest_subscribed=model.digest_subscribed,
             birthday=model.birthday,
         )

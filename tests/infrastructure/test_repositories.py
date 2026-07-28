@@ -1,8 +1,14 @@
 from datetime import date
 
+from domain.digest.entities import DigestEntry
 from domain.media.entities import ApodEntry, EpicDay
 from domain.media.value_objects import MediaSourceKind
-from infrastructure.db.repositories import SqlAlchemyApodRepository, SqlAlchemyEpicRepository, SqlAlchemyUserRepository
+from infrastructure.db.repositories import (
+    SqlAlchemyApodRepository,
+    SqlAlchemyDigestRepository,
+    SqlAlchemyEpicRepository,
+    SqlAlchemyUserRepository,
+)
 
 
 async def test_apod_repository_roundtrip(session_factory):
@@ -42,6 +48,17 @@ async def test_epic_repository_save_gif_message_id(session_factory):
     assert epic_day.is_cached is True
 
 
+async def test_digest_repository_roundtrip(session_factory):
+    repo = SqlAlchemyDigestRepository(session_factory)
+    day = date(2024, 1, 1)
+
+    assert await repo.get_by_date(day) is None
+
+    await repo.save(DigestEntry(date=day, message_id=10))
+
+    assert await repo.get_by_date(day) == DigestEntry(date=day, message_id=10)
+
+
 async def test_user_repository_subscription_roundtrip(session_factory):
     repo = SqlAlchemyUserRepository(session_factory)
 
@@ -55,6 +72,24 @@ async def test_user_repository_subscription_roundtrip(session_factory):
 
     unsubscribed = await repo.list_subscribed(MediaSourceKind.EPIC)
     assert unsubscribed == []
+
+
+async def test_user_repository_digest_subscription_roundtrip(session_factory):
+    repo = SqlAlchemyUserRepository(session_factory)
+
+    user = await repo.add(chat_id=777)
+    assert user.digest_subscribed is False
+
+    await repo.save(user.with_subscription(MediaSourceKind.DIGEST, True))
+
+    subscribed = await repo.list_subscribed(MediaSourceKind.DIGEST)
+    assert [u.chat_id for u in subscribed] == [777]
+
+    fetched = await repo.get_by_chat_id(777)
+    assert fetched is not None
+    assert fetched.digest_subscribed is True
+    assert fetched.apod_subscribed is False
+    assert fetched.epic_subscribed is False
 
 
 async def test_user_repository_birthday_roundtrip_and_listing(session_factory):
