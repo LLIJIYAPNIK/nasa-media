@@ -12,6 +12,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import BotCommand, BotCommandScopeDefault
 
 import config
+from application.digest.provider import DigestProvider
 from application.digest.source_adapter import DigestSourceAdapter
 from application.epic.refresh_availability import RefreshEpicAvailability
 from application.media.broadcast import BroadcastSubscribedUsers
@@ -66,9 +67,17 @@ async def periodic_broadcast(
         today = date.today()
         logger.info("Запуск суточного обновления: доступность EPIC + рассылки")
         await refresh_epic_availability.execute()
-        await broadcast_epic.execute(today)
-        await broadcast_apod.execute(today)
-        await broadcast_digest.execute(today)
+        # Независимые друг от друга рассылки — параллельно. send_birthday_greetings
+        # держим отдельно после: он тоже пишет в apod_repo через deliver_apod
+        # (переиспользует кеш APOD), и если бы шёл в одном gather с
+        # broadcast_apod, оба могли бы одновременно словить промах кеша на
+        # сегодняшнюю дату и упасть на уникальном ограничении по дате при
+        # двойной вставке.
+        await asyncio.gather(
+            broadcast_epic.execute(today),
+            broadcast_apod.execute(today),
+            broadcast_digest.execute(today),
+        )
         await send_birthday_greetings.execute(today)
         await asyncio.sleep(PERIODIC_UPDATE_INTERVAL_SECONDS)
 
@@ -103,11 +112,11 @@ async def main() -> None:
         admin_chat_gateway = TelegramAdminChatGateway(http_session, bot, config.ADMIN_CHAT_ID)
         greeting_sender = TelegramGreetingSender(bot)
 
+        digest_provider = DigestProvider(donki_client, neows_client, eonet_client, apod_repo)
+
         deliver_apod = DeliverMediaForDate(ApodSourceAdapter(apod_provider, apod_repo, admin_chat_gateway))
         deliver_epic = DeliverMediaForDate(EpicSourceAdapter(epic_provider, epic_repo, admin_chat_gateway))
-        deliver_digest = DeliverMediaForDate(
-            DigestSourceAdapter(donki_client, neows_client, eonet_client, apod_repo, digest_repo, admin_chat_gateway)
-        )
+        deliver_digest = DeliverMediaForDate(DigestSourceAdapter(digest_provider, digest_repo, admin_chat_gateway))
         deliver_apod_range = DeliverMediaForDateRange(deliver_apod)
 
         get_or_create_user = GetOrCreateUser(user_repo)

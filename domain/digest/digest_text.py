@@ -9,6 +9,7 @@ from domain.digest.value_objects import AsteroidHighlight, EarthEventHighlight, 
 # (еженедельный сводный мета-документ, не событие дня) сознательно не входит
 # в список и никогда не выбирается (см. docs/tz/TZ-daily-digest.md).
 SPACE_WEATHER_PRIORITY = ("GST", "FLR", "CME", "IPS", "RBE")
+_SPACE_WEATHER_RANK = {message_type: rank for rank, message_type in enumerate(SPACE_WEATHER_PRIORITY)}
 
 _SPACE_WEATHER_LABELS = {
     "GST": "🧲 Геомагнитная буря",
@@ -20,12 +21,12 @@ _SPACE_WEATHER_LABELS = {
 
 
 def pick_significant_space_weather(events: Sequence[SpaceWeatherHighlight]) -> SpaceWeatherHighlight | None:
-    relevant = [event for event in events if event.message_type in SPACE_WEATHER_PRIORITY]
+    relevant = [event for event in events if event.message_type in _SPACE_WEATHER_RANK]
     if not relevant:
         return None
-    best_type = min(relevant, key=lambda event: SPACE_WEATHER_PRIORITY.index(event.message_type)).message_type
-    same_type = [event for event in relevant if event.message_type == best_type]
-    return max(same_type, key=lambda event: event.issued_at)
+    # Приоритет типа важнее свежести (первый ключ), при равном типе — самое
+    # позднее уведомление (второй ключ, со знаком минус — min ищет наименьшее).
+    return min(relevant, key=lambda event: (_SPACE_WEATHER_RANK[event.message_type], -event.issued_at.timestamp()))
 
 
 def pick_closest_asteroid(asteroids: Sequence[AsteroidHighlight]) -> AsteroidHighlight | None:

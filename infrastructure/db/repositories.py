@@ -5,19 +5,12 @@ from datetime import date as date_
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
-from sqlalchemy.orm import InstrumentedAttribute
 
 from domain.digest.entities import DigestEntry
 from domain.media.entities import ApodEntry, EpicDay
 from domain.media.value_objects import MediaSourceKind
-from domain.users.entities import User
+from domain.users.entities import SUBSCRIPTION_FIELDS, User
 from infrastructure.db.models import ApodModel, DigestModel, EpicDayModel, UserModel
-
-_SUBSCRIPTION_COLUMNS: dict[MediaSourceKind, InstrumentedAttribute[bool]] = {
-    MediaSourceKind.APOD: UserModel.apod_subscribed,
-    MediaSourceKind.EPIC: UserModel.epic_subscribed,
-    MediaSourceKind.DIGEST: UserModel.digest_subscribed,
-}
 
 
 class _SqlAlchemyRepository:
@@ -107,7 +100,7 @@ class SqlAlchemyUserRepository(_SqlAlchemyRepository):
             await session.commit()
 
     async def list_subscribed(self, source: MediaSourceKind) -> Sequence[User]:
-        column = _SUBSCRIPTION_COLUMNS[source]
+        column = getattr(UserModel, SUBSCRIPTION_FIELDS[source])
         async with self._session_factory() as session:
             models = await session.scalars(select(UserModel).where(column.is_(True)))
             return [self._to_domain(model) for model in models]
