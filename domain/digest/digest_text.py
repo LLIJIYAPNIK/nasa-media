@@ -106,3 +106,43 @@ def build_digest_text(
     apod_cached: bool,
 ) -> str:
     return "\n".join(build_digest_lines(day, space_weather, asteroid, earth_event, apod_cached))
+
+
+def _format_weekly_space_weather(highlight: SpaceWeatherHighlight | None) -> str:
+    if highlight is None:
+        return "🌤 На этой неделе космос был спокоен."
+    label = _SPACE_WEATHER_LABELS.get(highlight.message_type, highlight.message_type)
+    return f"{label} (NASA DONKI)."
+
+
+def _format_weekly_asteroid(highlight: AsteroidHighlight | None) -> str:
+    if highlight is None:
+        return "☄️ Заметных астероидов на этой неделе не было."
+    size = (
+        f"{round(highlight.diameter_min_m)}–{round(highlight.diameter_max_m)} м "
+        f"({compare_to_familiar_object(highlight.diameter_max_m)})"
+    )
+    hazard = " ⚠️ потенциально опасен" if highlight.is_hazardous else ""
+    return f"☄️ Самый крупный астероид недели: {highlight.name}, {size}{hazard}."
+
+
+def _format_weekly_earth_event(highlight: EarthEventHighlight | None) -> str:
+    if highlight is None:
+        return "🌍 Заметных событий на Земле на этой неделе не было."
+    return f"🌍 {highlight.title} ({highlight.category})."
+
+
+def build_weekly_highlights_lines(
+    week_start_date: date_,
+    week_end_date: date_,
+    space_weather: SpaceWeatherHighlight | None,
+    asteroid: AsteroidHighlight | None,
+    earth_event: EarthEventHighlight | None,
+) -> list[str]:
+    return [
+        f"🌟 Итоги недели: {week_start_date.isoformat()} — {week_end_date.isoformat()}",
+        "",
+        _format_weekly_space_weather(space_weather),
+        _format_weekly_asteroid(asteroid),
+        _format_weekly_earth_event(earth_event),
+    ]

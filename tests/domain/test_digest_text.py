@@ -5,6 +5,7 @@ import pytest
 from domain.digest.digest_text import (
     build_digest_lines,
     build_digest_text,
+    build_weekly_highlights_lines,
     pick_closest_asteroid,
     pick_largest_asteroid,
     pick_latest_earth_event,
@@ -176,3 +177,35 @@ def test_build_digest_lines_returns_list_of_strings():
 
     assert isinstance(lines, list)
     assert all(isinstance(line, str) for line in lines)
+
+
+# --- build_weekly_highlights_lines ---
+
+WEEK_START = date(2026, 7, 27)
+WEEK_END = date(2026, 8, 2)
+
+
+def test_build_weekly_highlights_lines_uses_largest_asteroid_wording():
+    text = "\n".join(
+        build_weekly_highlights_lines(
+            WEEK_START, WEEK_END, None, _asteroid("Huge", 200_000, diameter_max_m=900), None
+        )
+    )
+
+    assert "Самый крупный астероид недели" in text
+    assert "Huge" in text
+
+
+def test_build_weekly_highlights_lines_reports_no_notable_events_when_all_empty():
+    text = "\n".join(build_weekly_highlights_lines(WEEK_START, WEEK_END, None, None, None))
+
+    assert "этой неделе космос был спокоен" in text
+    assert "астероидов на этой неделе не было" in text
+    assert "событий на Земле на этой неделе не было" in text
+
+
+def test_build_weekly_highlights_lines_includes_week_range_in_title():
+    lines = build_weekly_highlights_lines(WEEK_START, WEEK_END, None, None, None)
+
+    assert WEEK_START.isoformat() in lines[0]
+    assert WEEK_END.isoformat() in lines[0]
