@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from datetime import date as date_
 
+from domain.digest.size_comparison import compare_to_familiar_object
 from domain.digest.value_objects import AsteroidHighlight, EarthEventHighlight, SpaceWeatherHighlight
 
 # GST > FLR > CME > IPS > RBE — приоритет «главного» события за день. Report
@@ -51,7 +52,10 @@ def _format_space_weather(highlight: SpaceWeatherHighlight | None) -> str:
 def _format_asteroid(highlight: AsteroidHighlight | None) -> str:
     if highlight is None:
         return "☄️ Заметных астероидов сегодня нет."
-    size = f"{round(highlight.diameter_min_m)}–{round(highlight.diameter_max_m)} м"
+    size = (
+        f"{round(highlight.diameter_min_m)}–{round(highlight.diameter_max_m)} м "
+        f"({compare_to_familiar_object(highlight.diameter_max_m)})"
+    )
     hazard = " ⚠️ потенциально опасен" if highlight.is_hazardous else ""
     return (
         f"☄️ Ближайший астероид: {highlight.name}, {size}, "

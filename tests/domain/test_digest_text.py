@@ -114,6 +114,7 @@ def test_build_digest_text_combinations(has_space_weather: bool, has_asteroid: b
     assert ("сегодня спокоен" in text) is not has_space_weather
     assert ("Ближайший астероид" in text) is has_asteroid
     assert ("астероидов сегодня нет" in text) is not has_asteroid
+    assert ("примерно с синего кита" in text) is has_asteroid
     assert ("Test event" in text) is has_earth_event
     assert ("событий на Земле сегодня нет" in text) is not has_earth_event
 
