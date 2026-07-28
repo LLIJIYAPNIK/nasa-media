@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock
 from aiogram import Router
 from aiogram.types import CallbackQuery, Message
 
+from domain.users.cosmic_facts import build_cosmic_facts_text
 from domain.users.entities import User
 from presentation.telegram.routers.apod_router import build_apod_router
 from presentation.telegram.states import ApodBirthdayForm
@@ -52,6 +53,7 @@ async def test_cosmic_birthday_delivers_immediately_when_already_set():
 
     state.set_state.assert_not_awaited()
     deliver_media.execute.assert_awaited_once_with(stored_birthday, 1)
+    callback_query.message.answer.assert_awaited_once_with(build_cosmic_facts_text(stored_birthday, date.today()))
 
 
 async def test_finish_birthday_saves_and_delivers_when_within_apod_bounds():
@@ -66,6 +68,7 @@ async def test_finish_birthday_saves_and_delivers_when_within_apod_bounds():
     set_birthday.execute.assert_awaited_once_with(1, date(2000, 5, 20))
     state.clear.assert_awaited_once()
     deliver_media.execute.assert_awaited_once_with(date(2000, 5, 20), 1)
+    message.answer.assert_awaited_once_with(build_cosmic_facts_text(date(2000, 5, 20), date.today()))
 
 
 async def test_finish_birthday_saves_but_explains_when_before_apod_lower_bound():

@@ -1,7 +1,8 @@
 from datetime import date
 
-from application.users.send_birthday_greetings import SendBirthdayGreetings
+from application.users.send_birthday_greetings import GREETING_TEXT, SendBirthdayGreetings
 from domain.media.exceptions import MediaNotAvailable
+from domain.users.cosmic_facts import build_cosmic_facts_text
 from domain.users.entities import User
 from tests.application.fakes import FakeGreetingSender, FakeUserRepository
 
@@ -33,7 +34,9 @@ async def test_greets_only_users_whose_birthday_is_today():
     await use_case.execute(TODAY)
 
     assert deliver.calls == [(TODAY, 1)]
-    assert [chat_id for chat_id, _ in greeting_sender.sent] == [1]
+    assert [chat_id for chat_id, _ in greeting_sender.sent] == [1, 1]
+    assert greeting_sender.sent[0] == (1, GREETING_TEXT)
+    assert greeting_sender.sent[1] == (1, build_cosmic_facts_text(date(1990, 3, 15), TODAY))
 
 
 async def test_skips_greeting_when_media_not_available_but_does_not_crash():
