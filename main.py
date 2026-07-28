@@ -13,19 +13,19 @@ from aiogram.types import BotCommand, BotCommandScopeDefault
 
 import config
 from application.digest.provider import DigestProvider
-from application.digest.source_adapter import DigestSourceAdapter
 from application.digest.weekly_provider import WeeklyHighlightsProvider
-from application.digest.weekly_source_adapter import WeeklyHighlightsSourceAdapter
 from application.epic.refresh_availability import RefreshEpicAvailability
 from application.media.broadcast import BroadcastSubscribedUsers
 from application.media.deliver_media import DeliverMediaForDate
 from application.media.deliver_media_range import DeliverMediaForDateRange
-from application.media.source_adapters import ApodSourceAdapter, EpicSourceAdapter
+from application.media.source_adapters import EpicSourceAdapter, GenericSourceAdapter
 from application.subscriptions.manage_subscription import SetSubscription
 from application.users.register_user import GetOrCreateUser
 from application.users.send_birthday_greetings import SendBirthdayGreetings
 from application.users.set_birthday import SetBirthday
+from domain.digest.entities import DigestEntry, WeeklyHighlightEntry
 from domain.digest.week import week_start
+from domain.media.entities import ApodEntry
 from domain.media.value_objects import MediaSourceKind
 from infrastructure.db.models import Base
 from infrastructure.db.repositories import (
@@ -125,11 +125,24 @@ async def main() -> None:
         digest_provider = DigestProvider(donki_client, neows_client, eonet_client, apod_repo)
         weekly_highlights_provider = WeeklyHighlightsProvider(donki_client, neows_client, eonet_client)
 
-        deliver_apod = DeliverMediaForDate(ApodSourceAdapter(apod_provider, apod_repo, admin_chat_gateway))
+        deliver_apod = DeliverMediaForDate(
+            GenericSourceAdapter(
+                apod_provider, apod_repo, admin_chat_gateway, lambda day, message_id: ApodEntry(day, message_id)
+            )
+        )
         deliver_epic = DeliverMediaForDate(EpicSourceAdapter(epic_provider, epic_repo, admin_chat_gateway))
-        deliver_digest = DeliverMediaForDate(DigestSourceAdapter(digest_provider, digest_repo, admin_chat_gateway))
+        deliver_digest = DeliverMediaForDate(
+            GenericSourceAdapter(
+                digest_provider, digest_repo, admin_chat_gateway, lambda day, message_id: DigestEntry(day, message_id)
+            )
+        )
         deliver_weekly_highlights = DeliverMediaForDate(
-            WeeklyHighlightsSourceAdapter(weekly_highlights_provider, weekly_highlights_repo, admin_chat_gateway)
+            GenericSourceAdapter(
+                weekly_highlights_provider,
+                weekly_highlights_repo,
+                admin_chat_gateway,
+                lambda day, message_id: WeeklyHighlightEntry(day, message_id),
+            )
         )
         deliver_apod_range = DeliverMediaForDateRange(deliver_apod)
 
