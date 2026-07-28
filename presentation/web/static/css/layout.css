@@ -33,7 +33,10 @@ html, body {
    переключаемое состояние (было пасхалкой на 7 кликов по .nav-logo, автор
    не нашёл — см. docs/tz/web-homepage-fixes-round2). Только
    настроение/палитра, без ассетов игры. z-index ниже .stars, чтобы
-   звёздное поле оставалось поверх вихря.
+   звёздное поле оставалось поверх вихря. Палитра — глубокий синий, не
+   фиолетовый (docs/tz/web-homepage-fixes-round6 — фиолетово-пурпурный
+   вихрь round 3 автору не понравился); тёплый отсвет у горизонта остаётся,
+   но приглушён, чтобы не тянуть общий тон в розовый.
 
    Базовый фон страницы (глубокий космос + тёплый отсвет у горизонта)
    умышленно не на `html, body` — в Chromium фон, заданный на body,
@@ -57,21 +60,21 @@ body::before {
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(closest-side at 50% 34%, transparent 0%, transparent 30%, rgba(5, 1, 10, .55) 62%, rgba(5, 1, 10, .92) 100%),
+    radial-gradient(closest-side at 50% 34%, transparent 0%, transparent 30%, rgba(3, 7, 18, .55) 62%, rgba(3, 7, 18, .92) 100%),
     conic-gradient(
       from 0deg at 50% 34%,
-      rgba(196, 130, 255, .5),
-      rgba(88, 28, 168, .32) 10%,
-      rgba(30, 6, 70, .45) 22%,
-      rgba(219, 39, 119, .35) 34%,
-      rgba(15, 4, 40, .5) 46%,
-      rgba(147, 51, 234, .38) 58%,
-      rgba(59, 7, 100, .42) 70%,
-      rgba(236, 72, 153, .32) 82%,
-      rgba(196, 130, 255, .5) 100%
+      rgba(147, 197, 253, .55),
+      rgba(37, 99, 235, .38) 10%,
+      rgba(10, 20, 55, .55) 22%,
+      rgba(56, 130, 246, .4) 34%,
+      rgba(6, 12, 35, .6) 46%,
+      rgba(59, 160, 220, .42) 58%,
+      rgba(15, 30, 70, .48) 70%,
+      rgba(96, 165, 250, .35) 82%,
+      rgba(147, 197, 253, .55) 100%
     ),
-    linear-gradient(to top, rgba(251, 146, 60, .22) 0%, rgba(219, 39, 119, .1) 14%, transparent 34%),
-    radial-gradient(ellipse 1400px 1000px at 58% 36%, #2a0a3f 0%, #120620 55%, #05010a 100%);
+    linear-gradient(to top, rgba(251, 146, 60, .16) 0%, transparent 30%),
+    radial-gradient(ellipse 1400px 1000px at 58% 36%, #12244a 0%, #0a1226 55%, #05070f 100%);
   background-blend-mode: normal, normal, soft-light, normal;
   filter: blur(42px) saturate(1.25);
   animation: nightreign-spin 90s linear infinite;
@@ -84,7 +87,7 @@ body::after {
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(560px 480px at 50% 34%, rgba(255, 255, 255, .95), rgba(214, 188, 255, .6) 24%, rgba(139, 92, 246, .35) 50%, transparent 74%),
+    radial-gradient(560px 480px at 50% 34%, rgba(255, 255, 255, .95), rgba(191, 219, 254, .6) 24%, rgba(59, 130, 246, .35) 50%, transparent 74%),
     url("/static/images/nightreign-sky-swirl.svg") center / cover no-repeat;
   filter: blur(3px);
   mix-blend-mode: screen;

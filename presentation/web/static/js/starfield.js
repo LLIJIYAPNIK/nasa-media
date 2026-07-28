@@ -1,9 +1,10 @@
 // Процедурное звёздное поле на <canvas class="stars"> — заменяет 12
 // захардкоженных radial-gradient (см. docs/tz/web-homepage-fixes/
 // TZ-web-homepage-fixes.md, п. 4). Обычный 2D-контекст, не WebGL — дёшево
-// для ~200-250 точек, перерисовывается по ResizeObserver (дебаунс).
-const STAR_COUNT_FAR = 160;
-const STAR_COUNT_NEAR = 70;
+// даже для ~700 точек (round 6, docs/tz/web-homepage-fixes-round6 — автору
+// показалось мало), перерисовывается по ResizeObserver (дебаунс).
+const STAR_COUNT_FAR = 460;
+const STAR_COUNT_NEAR = 220;
 const TWINKLE_EVERY = 8;
 const RESIZE_DEBOUNCE_MS = 200;
 

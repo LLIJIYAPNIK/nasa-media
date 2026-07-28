@@ -20,6 +20,11 @@ const CAMERA_Z_DESKTOP = 1.8;
 const CAMERA_Z_MOBILE = 3.2;
 const EARTH_OFFSET_X_DESKTOP = 0.6;
 const EARTH_OFFSET_X_MOBILE = 0;
+// Подобрано визуально перебором 12 углов через 30° (docs/tz/
+// web-homepage-fixes-round5) — вид на Южную/Юго-Восточную Азию (Индия,
+// Индокитай, Малайский архипелаг) даёт заметно больше городских огней в
+// кадре, чем соседние варианты (океан Тихого/Индийского, тёмная Африка).
+const EARTH_ROTATION_Y = (150 * Math.PI) / 180;
 
 function isDesktopViewport() {
   return window.innerWidth > DESKTOP_BREAKPOINT_PX;
@@ -126,10 +131,16 @@ function initEarth() {
   const sunDirection = getSubsolarDirection(new Date());
 
   const earth = new THREE.Group();
-  // Долгота 0° (гринвичский меридиан) обращена к +Z камеры при rotation.y = 0;
-  // довернуть так, чтобы к камере смотрела текущая полуночная (не полуденная)
-  // долгота — та, что противоположна направлению на Солнце.
-  earth.rotation.y = Math.atan2(sunDirection.x, sunDirection.z) + Math.PI;
+  // Фиксированный поворот на плотный по городским огням регион (см.
+  // EARTH_ROTATION_Y выше) вместо прежнего расчёта от реального положения
+  // Солнца (текущая полуночная долгота к камере) — астрономически честно,
+  // но полночная долгота половину суток приходится на Тихий океан, и Земля
+  // показывала просто воду (см. docs/tz/web-homepage-fixes-round5). День/
+  // ночь на самой сфере (терминатор, свечение городов ниже) по-прежнему
+  // считается от настоящего sunDirection и не зависит от поворота — вид
+  // остаётся физически осмысленным, камера просто больше не гонится за
+  // полночью по всему земному шару.
+  earth.rotation.y = EARTH_ROTATION_Y;
 
   const globe = new THREE.Mesh(
     new THREE.SphereGeometry(1, 64, 64),
