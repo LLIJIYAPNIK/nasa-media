@@ -1,6 +1,6 @@
 from datetime import date
 
-from domain.digest.entities import DigestEntry
+from domain.digest.entities import DigestEntry, WeeklyHighlightEntry
 from domain.media.entities import ApodEntry, EpicDay
 from domain.media.value_objects import MediaSourceKind
 from infrastructure.db.repositories import (
@@ -8,6 +8,7 @@ from infrastructure.db.repositories import (
     SqlAlchemyDigestRepository,
     SqlAlchemyEpicRepository,
     SqlAlchemyUserRepository,
+    SqlAlchemyWeeklyHighlightsRepository,
 )
 
 
@@ -57,6 +58,35 @@ async def test_digest_repository_roundtrip(session_factory):
     await repo.save(DigestEntry(date=day, message_id=10))
 
     assert await repo.get_by_date(day) == DigestEntry(date=day, message_id=10)
+
+
+async def test_weekly_highlights_repository_roundtrip(session_factory):
+    repo = SqlAlchemyWeeklyHighlightsRepository(session_factory)
+    week_start_date = date(2026, 7, 27)
+
+    assert await repo.get_by_date(week_start_date) is None
+
+    await repo.save(WeeklyHighlightEntry(week_start_date=week_start_date, message_id=10))
+
+    assert await repo.get_by_date(week_start_date) == WeeklyHighlightEntry(
+        week_start_date=week_start_date, message_id=10
+    )
+
+
+async def test_user_repository_weekly_highlights_subscription_roundtrip(session_factory):
+    repo = SqlAlchemyUserRepository(session_factory)
+
+    user = await repo.add(chat_id=888)
+    assert user.weekly_highlights_subscribed is False
+
+    await repo.save(user.with_subscription(MediaSourceKind.WEEKLY_HIGHLIGHTS, True))
+
+    subscribed = await repo.list_subscribed(MediaSourceKind.WEEKLY_HIGHLIGHTS)
+    assert [u.chat_id for u in subscribed] == [888]
+
+    fetched = await repo.get_by_chat_id(888)
+    assert fetched is not None
+    assert fetched.weekly_highlights_subscribed is True
 
 
 async def test_user_repository_subscription_roundtrip(session_factory):

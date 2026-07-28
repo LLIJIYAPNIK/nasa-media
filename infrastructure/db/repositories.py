@@ -6,11 +6,11 @@ from datetime import date as date_
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from domain.digest.entities import DigestEntry
+from domain.digest.entities import DigestEntry, WeeklyHighlightEntry
 from domain.media.entities import ApodEntry, EpicDay
 from domain.media.value_objects import MediaSourceKind
 from domain.users.entities import SUBSCRIPTION_FIELDS, User
-from infrastructure.db.models import ApodModel, DigestModel, EpicDayModel, UserModel
+from infrastructure.db.models import ApodModel, DigestModel, EpicDayModel, UserModel, WeeklyHighlightModel
 
 
 class _SqlAlchemyRepository:
@@ -72,6 +72,24 @@ class SqlAlchemyDigestRepository(_SqlAlchemyRepository):
             await session.commit()
 
 
+class SqlAlchemyWeeklyHighlightsRepository(_SqlAlchemyRepository):
+    async def get_by_date(self, week_start_date: date_) -> WeeklyHighlightEntry | None:
+        async with self._session_factory() as session:
+            model = await session.scalar(
+                select(WeeklyHighlightModel).where(WeeklyHighlightModel.week_start_date == week_start_date)
+            )
+            return (
+                WeeklyHighlightEntry(week_start_date=model.week_start_date, message_id=model.message_id)
+                if model
+                else None
+            )
+
+    async def save(self, entry: WeeklyHighlightEntry) -> None:
+        async with self._session_factory() as session:
+            session.add(WeeklyHighlightModel(week_start_date=entry.week_start_date, message_id=entry.message_id))
+            await session.commit()
+
+
 class SqlAlchemyUserRepository(_SqlAlchemyRepository):
     async def get_by_chat_id(self, chat_id: int) -> User | None:
         async with self._session_factory() as session:
@@ -94,6 +112,7 @@ class SqlAlchemyUserRepository(_SqlAlchemyRepository):
                     apod_subscribed=user.apod_subscribed,
                     epic_subscribed=user.epic_subscribed,
                     digest_subscribed=user.digest_subscribed,
+                    weekly_highlights_subscribed=user.weekly_highlights_subscribed,
                     birthday=user.birthday,
                 )
             )
@@ -117,5 +136,6 @@ class SqlAlchemyUserRepository(_SqlAlchemyRepository):
             apod_subscribed=model.apod_subscribed,
             epic_subscribed=model.epic_subscribed,
             digest_subscribed=model.digest_subscribed,
+            weekly_highlights_subscribed=model.weekly_highlights_subscribed,
             birthday=model.birthday,
         )
