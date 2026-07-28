@@ -27,13 +27,16 @@ class AnimationPayload:
 
 
 @dataclass(frozen=True, slots=True)
-class TextPayload:
-    """Сводка дня: обычное текстовое сообщение без вложений."""
+class GeneratedImagePayload:
+    """Сгенерированная картинка-карточка (card_builder.py) — сводка дня,
+    космические факты дня рождения. Заменяет TextPayload: текст неудобно
+    репостить, картинку — один тап (см. TZ-share-cards.md)."""
 
-    text: str
+    image_bytes: bytes
+    caption: str | None = None
 
 
-MediaPayload = SinglePhotoPayload | AnimationPayload | TextPayload
+MediaPayload = SinglePhotoPayload | AnimationPayload | GeneratedImagePayload
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,10 +65,12 @@ class AdminChatGateway(Protocol):
 
 
 class GreetingSender(Protocol):
-    """Личное текстовое сообщение пользователю — не через admin-чат: не
-    кешируется и не переиспользуется другими получателями."""
+    """Личное сообщение пользователю — не через admin-чат: не кешируется и
+    не переиспользуется другими получателями."""
 
     async def send_text(self, chat_id: int, text: str) -> None: ...
+
+    async def send_image(self, chat_id: int, image_bytes: bytes, caption: str | None = None) -> None: ...
 
 
 class ApodRepository(Protocol):
