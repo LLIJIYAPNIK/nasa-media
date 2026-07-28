@@ -66,7 +66,9 @@ def build_cosmic_facts_lines(birthday: date_, today: date_) -> list[str]:
     lines = [f"🌙 Сегодня фаза Луны: {phase_name}."]
     for index, age in enumerate(ages):
         prefix = "🪐 " if index == 0 else ""
-        lines.append(f"{prefix}{age.planet_name}: тебе исполнилось {age.age_years} {_PLANET_ADJECTIVES[age.planet_name]} лет.")
+        lines.append(
+            f"{prefix}{age.planet_name}: тебе исполнилось {age.age_years} {_PLANET_ADJECTIVES[age.planet_name]} лет."
+        )
     return lines
 
 

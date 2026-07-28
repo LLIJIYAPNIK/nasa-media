@@ -18,6 +18,7 @@ def _router(set_subscription: AsyncMock) -> Router:
         set_subscription=set_subscription,
         get_or_create_user=AsyncMock(),
         set_birthday=AsyncMock(),
+        greeting_sender=AsyncMock(),
         apod_lower_bound=date(1995, 6, 16),
     )
 

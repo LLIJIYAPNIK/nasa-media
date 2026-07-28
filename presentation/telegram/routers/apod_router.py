@@ -10,12 +10,14 @@ from aiogram.utils.chat_action import ChatActionSender
 
 from application.media.deliver_media import DeliverMediaForDate
 from application.media.deliver_media_range import DeliverMediaForDateRange
+from application.media.ports import GreetingSender
 from application.subscriptions.manage_subscription import SetSubscription
 from application.users.register_user import GetOrCreateUser
 from application.users.set_birthday import SetBirthday
 from domain.media.exceptions import MediaNotAvailable
 from domain.media.value_objects import DateRange, InvalidMediaDate, MediaSourceKind, ensure_within_bounds
-from domain.users.cosmic_facts import build_cosmic_facts_text
+from domain.users.cosmic_facts import build_cosmic_facts_lines
+from infrastructure.files.card_builder import build_card
 from presentation.telegram.date_input import parse_birthday_date, parse_requested_date
 from presentation.telegram.keyboards.apod_kb import get_apod_kb
 from presentation.telegram.message_guards import require_bot, require_message
@@ -29,9 +31,15 @@ def build_apod_router(
     set_subscription: SetSubscription,
     get_or_create_user: GetOrCreateUser,
     set_birthday: SetBirthday,
+    greeting_sender: GreetingSender,
     apod_lower_bound: date,
 ) -> Router:
     router = Router()
+
+    async def send_cosmic_facts_card(chat_id: int, birthday: date) -> None:
+        title, *body_lines = build_cosmic_facts_lines(birthday, date.today())
+        image_bytes = await build_card(title=title, lines=body_lines)
+        await greeting_sender.send_image(chat_id, image_bytes, caption=title)
 
     async def deliver_to(message: Message, chat_id: int, day: date) -> None:
         async with ChatActionSender.upload_photo(bot=require_bot(message), chat_id=chat_id):
@@ -120,7 +128,7 @@ def build_apod_router(
         if user.birthday is not None:
             await message.delete()
             await deliver_to(message, message.chat.id, user.birthday)
-            await message.answer(build_cosmic_facts_text(user.birthday, date.today()))
+            await send_cosmic_facts_card(message.chat.id, user.birthday)
             return
         await state.set_state(ApodBirthdayForm.date)
         await message.delete()
@@ -148,7 +156,7 @@ def build_apod_router(
             return
 
         await deliver_to(message, message.chat.id, birthday)
-        await message.answer(build_cosmic_facts_text(birthday, date.today()))
+        await send_cosmic_facts_card(message.chat.id, birthday)
 
     register_subscribe_handlers(router, MediaSourceKind.APOD, set_subscription)
 

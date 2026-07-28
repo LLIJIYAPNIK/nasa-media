@@ -136,6 +136,7 @@ async def main() -> None:
                 set_subscription,
                 get_or_create_user,
                 set_birthday,
+                greeting_sender,
                 config.APOD_LOWER_BOUND,
             )
         )
