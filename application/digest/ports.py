@@ -4,16 +4,20 @@ from collections.abc import Sequence
 from datetime import date as date_
 from typing import Protocol
 
-from domain.digest.entities import DigestEntry
+from domain.digest.entities import DigestEntry, WeeklyHighlightEntry
 from domain.digest.value_objects import AsteroidHighlight, EarthEventHighlight, SpaceWeatherHighlight
 
 
 class SpaceWeatherClient(Protocol):
     async def fetch_for_day(self, day: date_) -> Sequence[SpaceWeatherHighlight]: ...
 
+    async def fetch_for_range(self, start: date_, end: date_) -> Sequence[SpaceWeatherHighlight]: ...
+
 
 class NearEarthObjectClient(Protocol):
     async def fetch_for_day(self, day: date_) -> Sequence[AsteroidHighlight]: ...
+
+    async def fetch_for_range(self, start: date_, end: date_) -> Sequence[AsteroidHighlight]: ...
 
 
 class NaturalEventClient(Protocol):
@@ -27,3 +31,9 @@ class DigestRepository(Protocol):
     async def get_by_date(self, day: date_) -> DigestEntry | None: ...
 
     async def save(self, entry: DigestEntry) -> None: ...
+
+
+class WeeklyHighlightsRepository(Protocol):
+    async def get_by_date(self, week_start_date: date_) -> WeeklyHighlightEntry | None: ...
+
+    async def save(self, entry: WeeklyHighlightEntry) -> None: ...
