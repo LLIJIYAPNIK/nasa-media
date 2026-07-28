@@ -48,6 +48,7 @@ from infrastructure.translation.ru_translator import GoogleRuTranslator
 from presentation.telegram.routers.apod_router import build_apod_router
 from presentation.telegram.routers.digest_router import build_digest_router
 from presentation.telegram.routers.epic_router import build_epic_router
+from presentation.telegram.routers.inline_router import build_inline_router
 from presentation.telegram.routers.start_router import build_start_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -180,6 +181,7 @@ async def main() -> None:
         dp.include_router(
             build_digest_router(deliver_digest, deliver_weekly_highlights, set_subscription, get_or_create_user)
         )
+        dp.include_router(build_inline_router(apod_repo, epic_repo, digest_repo, weekly_highlights_repo))
 
         await bot.delete_webhook(drop_pending_updates=True)
         asyncio.create_task(
