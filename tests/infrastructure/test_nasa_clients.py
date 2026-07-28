@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from io import BytesIO
 
 import pytest
@@ -6,8 +6,11 @@ from PIL import Image
 
 from domain.media.exceptions import MediaNotAvailable
 from infrastructure.nasa.apod_client import ApodProvider
+from infrastructure.nasa.donki_client import DonkiClient
+from infrastructure.nasa.eonet_client import EonetClient
 from infrastructure.nasa.epic_availability_client import EpicAvailabilityClient
 from infrastructure.nasa.epic_client import EPIC_ARCHIVE_BASE_URL, EpicProvider
+from infrastructure.nasa.neows_client import NeoWsClient
 from tests.infrastructure.fake_aiohttp import FakeClientSession, FakeResponse
 
 
@@ -19,6 +22,9 @@ def _fake_png_bytes(color: str) -> bytes:
 
 APOD_URL = "https://api.nasa.gov/planetary/apod"
 EPIC_URL = "https://api.nasa.gov/EPIC/api/natural"
+DONKI_URL = "https://api.nasa.gov/DONKI/notifications"
+NEOWS_URL = "https://api.nasa.gov/neo/rest/v1/feed"
+EONET_URL = "https://eonet.gsfc.nasa.gov/api/v3/events"
 
 
 class FakeTranslator:
@@ -150,3 +156,139 @@ async def test_epic_availability_client_parses_and_sorts_dates():
     dates = await client.fetch_known_dates()
 
     assert dates == [date(2024, 1, 1), date(2024, 1, 2)]
+
+
+async def test_donki_client_parses_message_type_and_issue_time():
+    session = FakeClientSession(
+        {
+            f"{DONKI_URL}?startDate=2024-01-01&endDate=2024-01-01&type=all&api_key=key": FakeResponse(
+                json_data=[
+                    {"messageType": "FLR", "messageIssueTime": "2024-01-01T10:00:00Z"},
+                    {"messageType": "Report", "messageIssueTime": "2024-01-01T12:00:00Z"},
+                ]
+            )
+        }
+    )
+    client = DonkiClient(session, "key", DONKI_URL)
+
+    highlights = await client.fetch_for_day(date(2024, 1, 1))
+
+    assert len(highlights) == 2
+    assert highlights[0].message_type == "FLR"
+    assert highlights[1].message_type == "Report"
+
+
+async def test_donki_client_returns_empty_list_when_no_notifications():
+    session = FakeClientSession(
+        {f"{DONKI_URL}?startDate=2024-01-01&endDate=2024-01-01&type=all&api_key=key": FakeResponse(json_data=[])}
+    )
+    client = DonkiClient(session, "key", DONKI_URL)
+
+    highlights = await client.fetch_for_day(date(2024, 1, 1))
+
+    assert highlights == []
+
+
+async def test_neows_client_parses_asteroids_for_the_day():
+    session = FakeClientSession(
+        {
+            f"{NEOWS_URL}?start_date=2024-01-01&end_date=2024-01-01&api_key=key": FakeResponse(
+                json_data={
+                    "near_earth_objects": {
+                        "2024-01-01": [
+                            {
+                                "name": "Test Asteroid",
+                                "estimated_diameter": {
+                                    "meters": {"estimated_diameter_min": 10.5, "estimated_diameter_max": 20.5}
+                                },
+                                "close_approach_data": [{"miss_distance": {"kilometers": "123456.7", "lunar": "0.32"}}],
+                                "is_potentially_hazardous_asteroid": True,
+                            }
+                        ]
+                    }
+                }
+            )
+        }
+    )
+    client = NeoWsClient(session, "key", NEOWS_URL)
+
+    asteroids = await client.fetch_for_day(date(2024, 1, 1))
+
+    assert len(asteroids) == 1
+    asteroid = asteroids[0]
+    assert asteroid.name == "Test Asteroid"
+    assert asteroid.diameter_min_m == 10.5
+    assert asteroid.diameter_max_m == 20.5
+    assert asteroid.miss_distance_km == 123456.7
+    assert asteroid.miss_distance_lunar == 0.32
+    assert asteroid.is_hazardous is True
+
+
+async def test_neows_client_returns_empty_list_when_day_missing():
+    session = FakeClientSession(
+        {
+            f"{NEOWS_URL}?start_date=2024-01-01&end_date=2024-01-01&api_key=key": FakeResponse(
+                json_data={"near_earth_objects": {}}
+            )
+        }
+    )
+    client = NeoWsClient(session, "key", NEOWS_URL)
+
+    asteroids = await client.fetch_for_day(date(2024, 1, 1))
+
+    assert asteroids == []
+
+
+async def test_eonet_client_does_not_send_api_key():
+    session = FakeClientSession({f"{EONET_URL}?status=open&limit=20": FakeResponse(json_data={"events": []})})
+    client = EonetClient(session, EONET_URL)
+
+    await client.fetch_recent()
+
+    assert session.requested_urls == [f"{EONET_URL}?status=open&limit=20"]
+    assert "api_key" not in session.requested_urls[0]
+
+
+async def test_eonet_client_picks_max_geometry_date_per_event():
+    session = FakeClientSession(
+        {
+            f"{EONET_URL}?status=open&limit=20": FakeResponse(
+                json_data={
+                    "events": [
+                        {
+                            "title": "Tropical Storm",
+                            "categories": [{"id": "severeStorms", "title": "Severe Storms"}],
+                            "geometry": [
+                                {"date": "2024-01-01T00:00:00Z"},
+                                {"date": "2024-01-03T00:00:00Z"},
+                                {"date": "2024-01-02T00:00:00Z"},
+                            ],
+                        }
+                    ]
+                }
+            )
+        }
+    )
+    client = EonetClient(session, EONET_URL)
+
+    highlights = await client.fetch_recent()
+
+    assert len(highlights) == 1
+    assert highlights[0].title == "Tropical Storm"
+    assert highlights[0].category == "Severe Storms"
+    assert highlights[0].event_date == datetime.fromisoformat("2024-01-03T00:00:00+00:00")
+
+
+async def test_eonet_client_skips_events_without_geometry_dates():
+    session = FakeClientSession(
+        {
+            f"{EONET_URL}?status=open&limit=20": FakeResponse(
+                json_data={"events": [{"title": "No dates", "categories": [], "geometry": []}]}
+            )
+        }
+    )
+    client = EonetClient(session, EONET_URL)
+
+    highlights = await client.fetch_recent()
+
+    assert highlights == []
