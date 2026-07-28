@@ -7,7 +7,6 @@
 import * as THREE from "three";
 
 const TEXTURE_BASE = "/static/textures/";
-const ROTATION_SPEED = 0.0009;
 const SUBSOLAR_REFRESH_MS = 5 * 60 * 1000;
 const POINTER_TILT_MAX = 0.22;
 const POINTER_LERP = 0.04;
@@ -178,9 +177,10 @@ function initEarth() {
     sun.position.copy(sunDirection);
   }, SUBSOLAR_REFRESH_MS);
 
-  // Курсор слегка доворачивает Землю на устройствах с мышью (pointer: fine),
-  // по аналогии с курсор-реактивным spotlight в hero на a-kulebyakin.ru.
-  // На тач-устройствах — только обычное постоянное вращение.
+  // Земля статична — единственное движение модели это лёгкий доворот за
+  // курсором на устройствах с мышью (pointer: fine), по аналогии с
+  // курсор-реактивным spotlight в hero на a-kulebyakin.ru. На тач-устройствах
+  // модель остаётся полностью неподвижной, без автономного дрейфа.
   let targetTiltX = 0;
   let targetTiltY = 0;
   let tiltX = 0;
@@ -196,9 +196,6 @@ function initEarth() {
   }
 
   function animate() {
-    earth.rotation.y += ROTATION_SPEED;
-    clouds.rotation.y += ROTATION_SPEED * 0.4;
-
     tiltX += (targetTiltX - tiltX) * POINTER_LERP;
     tiltY += (targetTiltY - tiltY) * POINTER_LERP;
     earth.rotation.x = tiltX;

@@ -2,12 +2,92 @@
   box-sizing: border-box;
 }
 
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-accent-soft) rgba(255, 255, 255, .06);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, .04);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-accent-soft);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
 html, body {
   margin: 0;
   min-height: 100%;
-  background: radial-gradient(ellipse 1200px 900px at 70% 45%, var(--color-bg-1) 0%, var(--color-bg-2) 55%, var(--color-bg-3) 100%);
+  background: radial-gradient(ellipse 1400px 1000px at 60% 40%, #2a0a3f 0%, #120620 55%, #05010a 100%);
   color: var(--color-text);
   font-family: var(--font-body);
+}
+
+/* Вихревое небо в духе Elden Ring Nightreign — постоянный фон страницы, не
+   переключаемое состояние (было пасхалкой на 7 кликов по .nav-logo, автор
+   не нашёл — см. docs/tz/web-homepage-fixes-round2). Только
+   настроение/палитра, без ассетов игры. z-index ниже .stars, чтобы
+   звёздное поле оставалось поверх вихря. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: -20%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    conic-gradient(
+      from 0deg at 55% 45%,
+      rgba(168, 85, 247, .55),
+      rgba(76, 29, 149, .35) 20%,
+      rgba(219, 39, 119, .4) 40%,
+      rgba(59, 7, 100, .5) 60%,
+      rgba(236, 72, 153, .35) 80%,
+      rgba(168, 85, 247, .55) 100%
+    );
+  filter: blur(60px);
+  animation: nightreign-spin 90s linear infinite;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(600px 500px at 55% 45%, rgba(236, 72, 153, .28), transparent 70%);
+  animation: nightreign-pulse 6s ease-in-out infinite;
+}
+
+@keyframes nightreign-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes nightreign-pulse {
+  0%, 100% {
+    opacity: .6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::before,
+  body::after {
+    animation: none;
+  }
 }
 
 .stars {
