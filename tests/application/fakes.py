@@ -10,6 +10,21 @@ from domain.media.entities import ApodEntry, EpicDay
 from domain.media.exceptions import MediaNotAvailable
 from domain.media.value_objects import MediaSourceKind
 from domain.users.entities import User
+from infrastructure.nasa.apod_client import ApodData
+
+
+class FakeApodRawClient:
+    def __init__(self, data: ApodData | None = None, raise_not_available: bool = False) -> None:
+        self.data = data
+        self.raise_not_available = raise_not_available
+        self.calls: list[date_] = []
+
+    async def fetch_raw(self, day: date_) -> ApodData:
+        self.calls.append(day)
+        if self.raise_not_available:
+            raise MediaNotAvailable("нет данных")
+        assert self.data is not None, "FakeApodRawClient needs data when raise_not_available=False"
+        return self.data
 
 
 class FakeApodProvider:

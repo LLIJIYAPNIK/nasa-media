@@ -9,8 +9,10 @@ class FakeResponse:
         self._json_data = json_data
         self._body = body
         self.status = status
+        self.json_content_type_args: list[str | None] = []
 
-    async def json(self) -> Any:
+    async def json(self, content_type: str | None = "application/json") -> Any:
+        self.json_content_type_args.append(content_type)
         return self._json_data
 
     async def read(self) -> bytes:
