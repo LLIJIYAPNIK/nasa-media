@@ -6,14 +6,18 @@ import pytest
 from aiogram import Router
 from aiogram.types import CallbackQuery
 
+from domain.digest.week import week_start
 from domain.media.value_objects import MediaSourceKind
 from presentation.telegram.routers.digest_router import build_digest_router
 from tests.presentation.fake_telegram import FakeCallbackQuery
 
 
-def _router(deliver_digest: AsyncMock, set_subscription: AsyncMock) -> Router:
+def _router(
+    deliver_digest: AsyncMock, set_subscription: AsyncMock, deliver_weekly_highlights: AsyncMock | None = None
+) -> Router:
     return build_digest_router(
         deliver_digest=deliver_digest,
+        deliver_weekly_highlights=deliver_weekly_highlights or AsyncMock(),
         set_subscription=set_subscription,
         get_or_create_user=AsyncMock(),
     )
@@ -48,3 +52,34 @@ async def test_digest_show_delivers_todays_digest():
     await router.callback_query.trigger(cast(CallbackQuery, callback_query))
 
     deliver_digest.execute.assert_awaited_once_with(date.today(), 555)
+
+
+@pytest.mark.parametrize(
+    ("callback_data", "expected_value", "expected_text"),
+    [
+        ("weekly_highlights_subscribe", True, "Вы подписались на рассылку итогов недели"),
+        ("weekly_highlights_unsubscribe", False, "Вы отписались от рассылки итогов недели"),
+    ],
+)
+async def test_weekly_highlights_subscribe_callback_calls_use_case_with_correct_source_and_value(
+    callback_data: str, expected_value: bool, expected_text: str
+) -> None:
+    set_subscription = AsyncMock()
+    router = _router(AsyncMock(), set_subscription)
+    callback_query = FakeCallbackQuery(data=callback_data, chat_id=777)
+
+    await router.callback_query.trigger(cast(CallbackQuery, callback_query))
+
+    set_subscription.execute.assert_awaited_once_with(777, MediaSourceKind.WEEKLY_HIGHLIGHTS, expected_value)
+    callback_query.message.delete.assert_awaited_once()
+    callback_query.message.answer.assert_awaited_once_with(expected_text)
+
+
+async def test_weekly_highlights_show_delivers_current_week_highlights():
+    deliver_weekly_highlights = AsyncMock()
+    router = _router(AsyncMock(), AsyncMock(), deliver_weekly_highlights)
+    callback_query = FakeCallbackQuery(data="weekly_highlights_show", chat_id=555)
+
+    await router.callback_query.trigger(cast(CallbackQuery, callback_query))
+
+    deliver_weekly_highlights.execute.assert_awaited_once_with(week_start(date.today()), 555)

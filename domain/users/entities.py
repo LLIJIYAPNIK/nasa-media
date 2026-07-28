@@ -12,6 +12,7 @@ SUBSCRIPTION_FIELDS = {
     MediaSourceKind.APOD: "apod_subscribed",
     MediaSourceKind.EPIC: "epic_subscribed",
     MediaSourceKind.DIGEST: "digest_subscribed",
+    MediaSourceKind.WEEKLY_HIGHLIGHTS: "weekly_highlights_subscribed",
 }
 
 
@@ -21,6 +22,7 @@ class User:
     apod_subscribed: bool = False
     epic_subscribed: bool = False
     digest_subscribed: bool = False
+    weekly_highlights_subscribed: bool = False
     birthday: date_ | None = None
 
     def is_subscribed(self, source: MediaSourceKind) -> bool:

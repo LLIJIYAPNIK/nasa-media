@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from datetime import date as date_
 
 from application.media.ports import CachedMessageRef, MediaPayload
-from domain.digest.entities import DigestEntry
+from domain.digest.entities import DigestEntry, WeeklyHighlightEntry
 from domain.digest.value_objects import AsteroidHighlight, EarthEventHighlight, SpaceWeatherHighlight
 from domain.media.entities import ApodEntry, EpicDay
 from domain.media.exceptions import MediaNotAvailable
@@ -105,9 +105,14 @@ class FakeSpaceWeatherClient:
     def __init__(self, events: Sequence[SpaceWeatherHighlight] | None = None) -> None:
         self.events = events or []
         self.calls: list[date_] = []
+        self.range_calls: list[tuple[date_, date_]] = []
 
     async def fetch_for_day(self, day: date_) -> Sequence[SpaceWeatherHighlight]:
         self.calls.append(day)
+        return self.events
+
+    async def fetch_for_range(self, start: date_, end: date_) -> Sequence[SpaceWeatherHighlight]:
+        self.range_calls.append((start, end))
         return self.events
 
 
@@ -115,9 +120,14 @@ class FakeNearEarthObjectClient:
     def __init__(self, asteroids: Sequence[AsteroidHighlight] | None = None) -> None:
         self.asteroids = asteroids or []
         self.calls: list[date_] = []
+        self.range_calls: list[tuple[date_, date_]] = []
 
     async def fetch_for_day(self, day: date_) -> Sequence[AsteroidHighlight]:
         self.calls.append(day)
+        return self.asteroids
+
+    async def fetch_for_range(self, start: date_, end: date_) -> Sequence[AsteroidHighlight]:
+        self.range_calls.append((start, end))
         return self.asteroids
 
 
@@ -140,3 +150,14 @@ class FakeDigestRepository:
 
     async def save(self, entry: DigestEntry) -> None:
         self._storage[entry.date] = entry
+
+
+class FakeWeeklyHighlightsRepository:
+    def __init__(self) -> None:
+        self._storage: dict[date_, WeeklyHighlightEntry] = {}
+
+    async def get_by_date(self, week_start_date: date_) -> WeeklyHighlightEntry | None:
+        return self._storage.get(week_start_date)
+
+    async def save(self, entry: WeeklyHighlightEntry) -> None:
+        self._storage[entry.week_start_date] = entry

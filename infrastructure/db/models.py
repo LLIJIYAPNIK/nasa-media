@@ -34,6 +34,14 @@ class DigestModel(Base):
     message_id: Mapped[int] = mapped_column(unique=True)
 
 
+class WeeklyHighlightModel(Base):
+    __tablename__ = "weekly_highlight"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    week_start_date: Mapped[date_] = mapped_column(Date, unique=True)
+    message_id: Mapped[int] = mapped_column(unique=True)
+
+
 class UserModel(Base):
     __tablename__ = "users"
 
@@ -42,4 +50,5 @@ class UserModel(Base):
     apod_subscribed: Mapped[bool] = mapped_column(default=False)
     epic_subscribed: Mapped[bool] = mapped_column(default=False)
     digest_subscribed: Mapped[bool] = mapped_column(default=False)
+    weekly_highlights_subscribed: Mapped[bool] = mapped_column(default=False)
     birthday: Mapped[date_ | None] = mapped_column(Date, default=None)

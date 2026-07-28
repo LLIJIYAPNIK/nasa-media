@@ -3,35 +3,51 @@ from datetime import date
 import pytest
 
 from application.media.ports import AnimationPayload, CachedMessageRef, SinglePhotoPayload
-from application.media.source_adapters import ApodSourceAdapter, EpicSourceAdapter
+from application.media.source_adapters import EpicSourceAdapter, GenericSourceAdapter
+from domain.digest.entities import WeeklyHighlightEntry
 from domain.media.entities import ApodEntry
 from domain.media.exceptions import MediaNotAvailable
-from tests.application.fakes import FakeAdminChatGateway, FakeApodProvider, FakeApodRepository, FakeEpicRepository
+from tests.application.fakes import (
+    FakeAdminChatGateway,
+    FakeApodProvider,
+    FakeApodRepository,
+    FakeEpicRepository,
+    FakeWeeklyHighlightsRepository,
+)
 
 
-async def test_apod_adapter_returns_cached_ref_on_hit():
+def _apod_adapter(repo=None, gateway=None, provider=None) -> GenericSourceAdapter[ApodEntry]:
+    return GenericSourceAdapter(
+        provider or FakeApodProvider(),
+        repo or FakeApodRepository(),
+        gateway or FakeAdminChatGateway(),
+        lambda day, message_id: ApodEntry(day, message_id),
+    )
+
+
+async def test_generic_adapter_returns_cached_ref_on_hit():
     repo = FakeApodRepository()
     day = date(2024, 1, 1)
     await repo.save(ApodEntry(date=day, message_id=42))
-    adapter = ApodSourceAdapter(FakeApodProvider(), repo, FakeAdminChatGateway())
+    adapter = _apod_adapter(repo=repo)
 
     cached = await adapter.get_cached(day)
 
     assert cached == CachedMessageRef(message_id=42)
 
 
-async def test_apod_adapter_is_a_cache_miss_when_never_fetched():
-    adapter = ApodSourceAdapter(FakeApodProvider(), FakeApodRepository(), FakeAdminChatGateway())
+async def test_generic_adapter_is_a_cache_miss_when_never_fetched():
+    adapter = _apod_adapter()
 
     assert await adapter.get_cached(date(2024, 1, 1)) is None
 
 
-async def test_apod_adapter_fetches_publishes_and_persists_on_miss():
+async def test_generic_adapter_fetches_publishes_and_persists_on_miss():
     repo = FakeApodRepository()
     day = date(2024, 1, 1)
     payload = SinglePhotoPayload(image_url="http://example.com/x.jpg", caption="caption")
     gateway = FakeAdminChatGateway(ref=CachedMessageRef(message_id=99))
-    adapter = ApodSourceAdapter(FakeApodProvider(payload=payload), repo, gateway)
+    adapter = _apod_adapter(repo=repo, gateway=gateway, provider=FakeApodProvider(payload=payload))
 
     ref = await adapter.fetch_and_cache(day)
 
@@ -40,13 +56,34 @@ async def test_apod_adapter_fetches_publishes_and_persists_on_miss():
     assert await repo.get_by_date(day) == ApodEntry(date=day, message_id=99)
 
 
-async def test_apod_adapter_forwards_via_gateway():
+async def test_generic_adapter_forwards_via_gateway():
     gateway = FakeAdminChatGateway()
-    adapter = ApodSourceAdapter(FakeApodProvider(), FakeApodRepository(), gateway)
+    adapter = _apod_adapter(gateway=gateway)
 
     await adapter.forward_cached(CachedMessageRef(message_id=7), chat_id=123)
 
     assert gateway.forwarded_single == [(7, 123)]
+
+
+async def test_generic_adapter_make_entry_works_with_a_differently_shaped_entry():
+    """Прогон с WeeklyHighlightEntry (поле week_start_date, не date) —
+    доказывает, что GenericSourceAdapter не завязан на конкретное имя поля
+    даты в Entry, только на make_entry(day, message_id)."""
+    repo = FakeWeeklyHighlightsRepository()
+    week_start_date = date(2024, 1, 1)
+    gateway = FakeAdminChatGateway(ref=CachedMessageRef(message_id=11))
+    adapter = GenericSourceAdapter(
+        FakeApodProvider(payload=SinglePhotoPayload(image_url="http://x", caption="c")),
+        repo,
+        gateway,
+        lambda day, message_id: WeeklyHighlightEntry(day, message_id),
+    )
+
+    await adapter.fetch_and_cache(week_start_date)
+
+    assert await repo.get_by_date(week_start_date) == WeeklyHighlightEntry(
+        week_start_date=week_start_date, message_id=11
+    )
 
 
 async def test_epic_adapter_raises_when_date_unknown_to_nasa():

@@ -17,6 +17,7 @@ class MediaSourceKind(Enum):
     APOD = "apod"
     EPIC = "epic"
     DIGEST = "digest"
+    WEEKLY_HIGHLIGHTS = "weekly_highlights"
 
 
 class InvalidMediaDate(ValueError):

@@ -13,16 +13,19 @@ from aiogram.types import BotCommand, BotCommandScopeDefault
 
 import config
 from application.digest.provider import DigestProvider
-from application.digest.source_adapter import DigestSourceAdapter
+from application.digest.weekly_provider import WeeklyHighlightsProvider
 from application.epic.refresh_availability import RefreshEpicAvailability
 from application.media.broadcast import BroadcastSubscribedUsers
 from application.media.deliver_media import DeliverMediaForDate
 from application.media.deliver_media_range import DeliverMediaForDateRange
-from application.media.source_adapters import ApodSourceAdapter, EpicSourceAdapter
+from application.media.source_adapters import EpicSourceAdapter, GenericSourceAdapter
 from application.subscriptions.manage_subscription import SetSubscription
 from application.users.register_user import GetOrCreateUser
 from application.users.send_birthday_greetings import SendBirthdayGreetings
 from application.users.set_birthday import SetBirthday
+from domain.digest.entities import DigestEntry, WeeklyHighlightEntry
+from domain.digest.week import week_start
+from domain.media.entities import ApodEntry
 from domain.media.value_objects import MediaSourceKind
 from infrastructure.db.models import Base
 from infrastructure.db.repositories import (
@@ -30,6 +33,7 @@ from infrastructure.db.repositories import (
     SqlAlchemyDigestRepository,
     SqlAlchemyEpicRepository,
     SqlAlchemyUserRepository,
+    SqlAlchemyWeeklyHighlightsRepository,
 )
 from infrastructure.db.session import build_engine, build_session_factory
 from infrastructure.nasa.apod_client import ApodProvider
@@ -61,6 +65,7 @@ async def periodic_broadcast(
     broadcast_epic: BroadcastSubscribedUsers,
     broadcast_apod: BroadcastSubscribedUsers,
     broadcast_digest: BroadcastSubscribedUsers,
+    broadcast_weekly_highlights: BroadcastSubscribedUsers,
     send_birthday_greetings: SendBirthdayGreetings,
 ) -> None:
     while True:
@@ -78,6 +83,10 @@ async def periodic_broadcast(
             broadcast_apod.execute(today),
             broadcast_digest.execute(today),
         )
+        if today.weekday() == 0:
+            # По понедельникам — не заводим второй цикл/интервал ради одной
+            # еженедельной проверки (см. docs/tz/TZ-weekly-highlights.md).
+            await broadcast_weekly_highlights.execute(week_start(today))
         await send_birthday_greetings.execute(today)
         await asyncio.sleep(PERIODIC_UPDATE_INTERVAL_SECONDS)
 
@@ -98,6 +107,7 @@ async def main() -> None:
     apod_repo = SqlAlchemyApodRepository(session_factory)
     epic_repo = SqlAlchemyEpicRepository(session_factory)
     digest_repo = SqlAlchemyDigestRepository(session_factory)
+    weekly_highlights_repo = SqlAlchemyWeeklyHighlightsRepository(session_factory)
     user_repo = SqlAlchemyUserRepository(session_factory)
 
     async with aiohttp.ClientSession() as http_session:
@@ -113,10 +123,27 @@ async def main() -> None:
         greeting_sender = TelegramGreetingSender(bot)
 
         digest_provider = DigestProvider(donki_client, neows_client, eonet_client, apod_repo)
+        weekly_highlights_provider = WeeklyHighlightsProvider(donki_client, neows_client, eonet_client)
 
-        deliver_apod = DeliverMediaForDate(ApodSourceAdapter(apod_provider, apod_repo, admin_chat_gateway))
+        deliver_apod = DeliverMediaForDate(
+            GenericSourceAdapter(
+                apod_provider, apod_repo, admin_chat_gateway, lambda day, message_id: ApodEntry(day, message_id)
+            )
+        )
         deliver_epic = DeliverMediaForDate(EpicSourceAdapter(epic_provider, epic_repo, admin_chat_gateway))
-        deliver_digest = DeliverMediaForDate(DigestSourceAdapter(digest_provider, digest_repo, admin_chat_gateway))
+        deliver_digest = DeliverMediaForDate(
+            GenericSourceAdapter(
+                digest_provider, digest_repo, admin_chat_gateway, lambda day, message_id: DigestEntry(day, message_id)
+            )
+        )
+        deliver_weekly_highlights = DeliverMediaForDate(
+            GenericSourceAdapter(
+                weekly_highlights_provider,
+                weekly_highlights_repo,
+                admin_chat_gateway,
+                lambda day, message_id: WeeklyHighlightEntry(day, message_id),
+            )
+        )
         deliver_apod_range = DeliverMediaForDateRange(deliver_apod)
 
         get_or_create_user = GetOrCreateUser(user_repo)
@@ -126,6 +153,9 @@ async def main() -> None:
         broadcast_apod = BroadcastSubscribedUsers(MediaSourceKind.APOD, deliver_apod, user_repo)
         broadcast_epic = BroadcastSubscribedUsers(MediaSourceKind.EPIC, deliver_epic, user_repo)
         broadcast_digest = BroadcastSubscribedUsers(MediaSourceKind.DIGEST, deliver_digest, user_repo)
+        broadcast_weekly_highlights = BroadcastSubscribedUsers(
+            MediaSourceKind.WEEKLY_HIGHLIGHTS, deliver_weekly_highlights, user_repo
+        )
         send_birthday_greetings = SendBirthdayGreetings(deliver_apod, user_repo, greeting_sender)
 
         dp.include_router(build_start_router(get_or_create_user))
@@ -141,12 +171,19 @@ async def main() -> None:
             )
         )
         dp.include_router(build_epic_router(deliver_epic, set_subscription, get_or_create_user))
-        dp.include_router(build_digest_router(deliver_digest, set_subscription, get_or_create_user))
+        dp.include_router(
+            build_digest_router(deliver_digest, deliver_weekly_highlights, set_subscription, get_or_create_user)
+        )
 
         await bot.delete_webhook(drop_pending_updates=True)
         asyncio.create_task(
             periodic_broadcast(
-                refresh_epic_availability, broadcast_epic, broadcast_apod, broadcast_digest, send_birthday_greetings
+                refresh_epic_availability,
+                broadcast_epic,
+                broadcast_apod,
+                broadcast_digest,
+                broadcast_weekly_highlights,
+                send_birthday_greetings,
             )
         )
 

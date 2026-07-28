@@ -7,7 +7,12 @@ from application.subscriptions.manage_subscription import SetSubscription
 from domain.media.value_objects import MediaSourceKind
 from presentation.telegram.message_guards import require_message
 
-_LABELS = {MediaSourceKind.APOD: "APOD", MediaSourceKind.EPIC: "EPIC", MediaSourceKind.DIGEST: "сводки"}
+_LABELS = {
+    MediaSourceKind.APOD: "APOD",
+    MediaSourceKind.EPIC: "EPIC",
+    MediaSourceKind.DIGEST: "сводки",
+    MediaSourceKind.WEEKLY_HIGHLIGHTS: "итогов недели",
+}
 
 
 def register_subscribe_handlers(router: Router, source: MediaSourceKind, set_subscription: SetSubscription) -> None:
