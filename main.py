@@ -36,7 +36,7 @@ from infrastructure.db.repositories import (
     SqlAlchemyWeeklyHighlightsRepository,
 )
 from infrastructure.db.session import build_engine, build_session_factory
-from infrastructure.nasa.apod_client import ApodProvider
+from infrastructure.nasa.apod_client import ApodClient, ApodProvider
 from infrastructure.nasa.donki_client import DonkiClient
 from infrastructure.nasa.eonet_client import EonetClient
 from infrastructure.nasa.epic_availability_client import EpicAvailabilityClient
@@ -113,7 +113,8 @@ async def main() -> None:
 
     async with aiohttp.ClientSession() as http_session:
         translator = GoogleRuTranslator()
-        apod_provider = ApodProvider(http_session, config.NASA_API_KEY, config.NASA_APOD_URL, translator)
+        apod_client = ApodClient(http_session, config.NASA_API_KEY, config.NASA_APOD_URL, translator)
+        apod_provider = ApodProvider(apod_client)
         epic_provider = EpicProvider(http_session, config.NASA_API_KEY, config.NASA_EPIC_URL)
         epic_availability = EpicAvailabilityClient(http_session, config.NASA_API_KEY, config.NASA_EPIC_URL)
         donki_client = DonkiClient(http_session, config.NASA_API_KEY, config.NASA_DONKI_URL)

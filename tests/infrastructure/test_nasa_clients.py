@@ -5,7 +5,7 @@ import pytest
 from PIL import Image
 
 from domain.media.exceptions import MediaNotAvailable
-from infrastructure.nasa.apod_client import ApodProvider
+from infrastructure.nasa.apod_client import ApodClient, ApodProvider
 from infrastructure.nasa.donki_client import DonkiClient
 from infrastructure.nasa.eonet_client import EonetClient
 from infrastructure.nasa.epic_availability_client import EpicAvailabilityClient
@@ -40,7 +40,7 @@ async def test_apod_provider_builds_payload_with_translated_caption():
             )
         }
     )
-    provider = ApodProvider(session, "key", APOD_URL, FakeTranslator())
+    provider = ApodProvider(ApodClient(session, "key", APOD_URL, FakeTranslator()))
 
     payload = await provider.fetch(date(2024, 1, 1))
 
@@ -63,7 +63,7 @@ async def test_apod_provider_appends_copyright_attribution_when_present():
             )
         }
     )
-    provider = ApodProvider(session, "key", APOD_URL, FakeTranslator())
+    provider = ApodProvider(ApodClient(session, "key", APOD_URL, FakeTranslator()))
 
     payload = await provider.fetch(date(2024, 1, 1))
 
@@ -84,7 +84,7 @@ async def test_apod_provider_prefers_hdurl_when_present():
             )
         }
     )
-    provider = ApodProvider(session, "key", APOD_URL, FakeTranslator())
+    provider = ApodProvider(ApodClient(session, "key", APOD_URL, FakeTranslator()))
 
     payload = await provider.fetch(date(2024, 1, 1))
 
@@ -99,7 +99,7 @@ async def test_apod_provider_raises_when_media_is_not_an_image():
             )
         }
     )
-    provider = ApodProvider(session, "key", APOD_URL, FakeTranslator())
+    provider = ApodProvider(ApodClient(session, "key", APOD_URL, FakeTranslator()))
 
     with pytest.raises(MediaNotAvailable):
         await provider.fetch(date(2024, 1, 1))
@@ -107,7 +107,7 @@ async def test_apod_provider_raises_when_media_is_not_an_image():
 
 async def test_apod_provider_raises_when_nasa_has_no_data_for_date():
     session = FakeClientSession({f"{APOD_URL}?date=2024-01-01&api_key=key": FakeResponse(json_data={"code": 404})})
-    provider = ApodProvider(session, "key", APOD_URL, FakeTranslator())
+    provider = ApodProvider(ApodClient(session, "key", APOD_URL, FakeTranslator()))
 
     with pytest.raises(MediaNotAvailable):
         await provider.fetch(date(2024, 1, 1))
