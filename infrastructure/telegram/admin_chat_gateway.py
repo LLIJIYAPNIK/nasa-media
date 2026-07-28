@@ -5,7 +5,7 @@ from aiogram import Bot
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import FSInputFile, Message
 
-from application.media.ports import AnimationPayload, CachedMessageRef, MediaPayload, SinglePhotoPayload
+from application.media.ports import AnimationPayload, CachedMessageRef, MediaPayload, SinglePhotoPayload, TextPayload
 from infrastructure.files.temp_file import temp_file, temp_image_file
 from infrastructure.http import fetch_bytes
 
@@ -23,6 +23,8 @@ class TelegramAdminChatGateway:
     async def publish(self, payload: MediaPayload) -> CachedMessageRef:
         if isinstance(payload, SinglePhotoPayload):
             return await self._publish_single(payload)
+        if isinstance(payload, TextPayload):
+            return await self._publish_text(payload)
         return await self._publish_animation(payload)
 
     async def forward_single(self, message_id: int, chat_id: int) -> None:
@@ -50,4 +52,8 @@ class TelegramAdminChatGateway:
     async def _publish_animation(self, payload: AnimationPayload) -> CachedMessageRef:
         async with temp_file(payload.gif_bytes, ".gif") as file_path:
             message = await self._bot.send_animation(chat_id=self._admin_chat_id, animation=FSInputFile(file_path))
+        return CachedMessageRef(message_id=message.message_id)
+
+    async def _publish_text(self, payload: TextPayload) -> CachedMessageRef:
+        message = await self._bot.send_message(chat_id=self._admin_chat_id, text=payload.text)
         return CachedMessageRef(message_id=message.message_id)

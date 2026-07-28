@@ -26,7 +26,14 @@ class AnimationPayload:
     gif_bytes: bytes
 
 
-MediaPayload = SinglePhotoPayload | AnimationPayload
+@dataclass(frozen=True, slots=True)
+class TextPayload:
+    """Сводка дня: обычное текстовое сообщение без вложений."""
+
+    text: str
+
+
+MediaPayload = SinglePhotoPayload | AnimationPayload | TextPayload
 
 
 @dataclass(frozen=True, slots=True)

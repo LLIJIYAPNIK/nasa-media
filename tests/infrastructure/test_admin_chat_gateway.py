@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 from aiogram.exceptions import TelegramBadRequest
 from PIL import Image
 
-from application.media.ports import AnimationPayload, SinglePhotoPayload
+from application.media.ports import AnimationPayload, SinglePhotoPayload, TextPayload
 from infrastructure.telegram.admin_chat_gateway import TelegramAdminChatGateway
 from tests.infrastructure.fake_aiohttp import FakeClientSession, FakeResponse
 
@@ -52,6 +52,18 @@ async def test_publish_animation_sends_gif_and_returns_message_id():
 
     assert ref.message_id == 77
     assert bot.send_animation.await_args.kwargs["chat_id"] == ADMIN_CHAT_ID
+
+
+async def test_publish_text_sends_message_and_returns_message_id():
+    bot = MagicMock()
+    bot.send_message = AsyncMock(return_value=MagicMock(message_id=88))
+    gateway = TelegramAdminChatGateway(FakeClientSession({}), bot, ADMIN_CHAT_ID)
+    payload = TextPayload(text="сводка дня")
+
+    ref = await gateway.publish(payload)
+
+    assert ref.message_id == 88
+    bot.send_message.assert_awaited_once_with(chat_id=ADMIN_CHAT_ID, text="сводка дня")
 
 
 async def test_forward_single_copies_message_from_admin_chat():

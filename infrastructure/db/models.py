@@ -26,6 +26,14 @@ class EpicDayModel(Base):
     gif_message_id: Mapped[int | None] = mapped_column(unique=True, default=None)
 
 
+class DigestModel(Base):
+    __tablename__ = "daily_digest"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    date: Mapped[date_] = mapped_column(Date, unique=True)
+    message_id: Mapped[int] = mapped_column(unique=True)
+
+
 class UserModel(Base):
     __tablename__ = "users"
 
@@ -33,4 +41,5 @@ class UserModel(Base):
     chat_id: Mapped[int] = mapped_column(unique=True)
     apod_subscribed: Mapped[bool] = mapped_column(default=False)
     epic_subscribed: Mapped[bool] = mapped_column(default=False)
+    digest_subscribed: Mapped[bool] = mapped_column(default=False)
     birthday: Mapped[date_ | None] = mapped_column(Date, default=None)

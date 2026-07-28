@@ -16,6 +16,7 @@ EPIC_LOWER_BOUND = date(2015, 6, 13)
 class MediaSourceKind(Enum):
     APOD = "apod"
     EPIC = "epic"
+    DIGEST = "digest"
 
 
 class InvalidMediaDate(ValueError):
