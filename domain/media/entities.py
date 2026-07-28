@@ -8,12 +8,14 @@ from datetime import date as date_
 class ApodEntry:
     date: date_
     message_id: int
+    file_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
 class EpicDay:
     date: date_
     gif_message_id: int | None = None
+    file_id: str | None = None
 
     @property
     def is_cached(self) -> bool:

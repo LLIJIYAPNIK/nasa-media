@@ -16,6 +16,13 @@ from infrastructure.files.temp_file import temp_file, temp_image_file
 from infrastructure.http import fetch_bytes
 
 
+def _largest_photo_file_id(message: Message) -> str:
+    """Telegram отдаёт несколько размеров одного фото — берём самый крупный
+    (последний в списке), как и раньше игнорируя (см. TZ-inline-mode.md)."""
+    assert message.photo is not None
+    return message.photo[-1].file_id
+
+
 class TelegramAdminChatGateway:
     """Общая реализация AdminChatGateway для APOD и EPIC — заменяет
     продублированные handlers/APOD/tools/sender.py и
@@ -46,7 +53,7 @@ class TelegramAdminChatGateway:
         except TelegramBadRequest:
             # Telegram не смог сам обратиться по ссылке — скачиваем и грузим файлом.
             message = await self._send_photo_via_download(payload.image_url, payload.caption)
-        return CachedMessageRef(message_id=message.message_id)
+        return CachedMessageRef(message_id=message.message_id, file_id=_largest_photo_file_id(message))
 
     async def _send_photo_via_download(self, image_url: str, caption: str) -> Message:
         raw_bytes = await fetch_bytes(self._session, image_url)
@@ -58,11 +65,12 @@ class TelegramAdminChatGateway:
     async def _publish_animation(self, payload: AnimationPayload) -> CachedMessageRef:
         async with temp_file(payload.gif_bytes, ".gif") as file_path:
             message = await self._bot.send_animation(chat_id=self._admin_chat_id, animation=FSInputFile(file_path))
-        return CachedMessageRef(message_id=message.message_id)
+        assert message.animation is not None
+        return CachedMessageRef(message_id=message.message_id, file_id=message.animation.file_id)
 
     async def _publish_generated_image(self, payload: GeneratedImagePayload) -> CachedMessageRef:
         async with temp_file(payload.image_bytes, ".png") as file_path:
             message = await self._bot.send_photo(
                 chat_id=self._admin_chat_id, photo=FSInputFile(file_path), caption=payload.caption
             )
-        return CachedMessageRef(message_id=message.message_id)
+        return CachedMessageRef(message_id=message.message_id, file_id=_largest_photo_file_id(message))

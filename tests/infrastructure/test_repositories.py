@@ -23,6 +23,17 @@ async def test_apod_repository_roundtrip(session_factory):
     assert await repo.get_by_date(day) == ApodEntry(date=day, message_id=10)
 
 
+async def test_apod_repository_file_id_roundtrip(session_factory):
+    repo = SqlAlchemyApodRepository(session_factory)
+    day = date(2024, 1, 1)
+
+    await repo.save(ApodEntry(date=day, message_id=10, file_id="apod-file-10"))
+
+    entry = await repo.get_by_date(day)
+    assert entry is not None
+    assert entry.file_id == "apod-file-10"
+
+
 async def test_epic_repository_ensure_known_dates_is_idempotent(session_factory):
     repo = SqlAlchemyEpicRepository(session_factory)
     day = date(2024, 1, 1)
@@ -49,6 +60,18 @@ async def test_epic_repository_save_gif_message_id(session_factory):
     assert epic_day.is_cached is True
 
 
+async def test_epic_repository_file_id_roundtrip(session_factory):
+    repo = SqlAlchemyEpicRepository(session_factory)
+    day = date(2024, 1, 1)
+    await repo.ensure_known_dates([day])
+
+    await repo.save(EpicDay(date=day, gif_message_id=123, file_id="epic-gif-123"))
+
+    epic_day = await repo.get_by_date(day)
+    assert epic_day is not None
+    assert epic_day.file_id == "epic-gif-123"
+
+
 async def test_digest_repository_roundtrip(session_factory):
     repo = SqlAlchemyDigestRepository(session_factory)
     day = date(2024, 1, 1)
@@ -58,6 +81,17 @@ async def test_digest_repository_roundtrip(session_factory):
     await repo.save(DigestEntry(date=day, message_id=10))
 
     assert await repo.get_by_date(day) == DigestEntry(date=day, message_id=10)
+
+
+async def test_digest_repository_file_id_roundtrip(session_factory):
+    repo = SqlAlchemyDigestRepository(session_factory)
+    day = date(2024, 1, 1)
+
+    await repo.save(DigestEntry(date=day, message_id=10, file_id="digest-file-10"))
+
+    entry = await repo.get_by_date(day)
+    assert entry is not None
+    assert entry.file_id == "digest-file-10"
 
 
 async def test_weekly_highlights_repository_roundtrip(session_factory):
@@ -71,6 +105,17 @@ async def test_weekly_highlights_repository_roundtrip(session_factory):
     assert await repo.get_by_date(week_start_date) == WeeklyHighlightEntry(
         week_start_date=week_start_date, message_id=10
     )
+
+
+async def test_weekly_highlights_repository_file_id_roundtrip(session_factory):
+    repo = SqlAlchemyWeeklyHighlightsRepository(session_factory)
+    week_start_date = date(2026, 7, 27)
+
+    await repo.save(WeeklyHighlightEntry(week_start_date=week_start_date, message_id=10, file_id="weekly-file-10"))
+
+    entry = await repo.get_by_date(week_start_date)
+    assert entry is not None
+    assert entry.file_id == "weekly-file-10"
 
 
 async def test_user_repository_weekly_highlights_subscription_roundtrip(session_factory):

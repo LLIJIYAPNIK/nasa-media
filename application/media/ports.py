@@ -43,9 +43,15 @@ MediaPayload = SinglePhotoPayload | AnimationPayload | GeneratedImagePayload
 class CachedMessageRef:
     """Что возвращает admin-чат после первой публикации — то, что кладём в
     репозиторий. Один message_id для обоих источников: EPIC раньше кешировал
-    отдельные кадры как медиа-группу, теперь — как и APOD, одно сообщение."""
+    отдельные кадры как медиа-группу, теперь — как и APOD, одно сообщение.
+
+    file_id — для inline-режима (TZ-inline-mode.md): Telegram отдавал его и
+    раньше при каждой публикации, просто не сохранялся, пока не понадобился
+    InlineQueryResultCachedPhoto/CachedGif. None для записей, сохранённых до
+    этой фичи — не бэкфиллится."""
 
     message_id: int
+    file_id: str | None = None
 
 
 class MediaProvider(Protocol):

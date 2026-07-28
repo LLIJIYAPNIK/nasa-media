@@ -16,6 +16,7 @@ class ApodModel(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     date: Mapped[date_] = mapped_column(Date, unique=True)
     message_id: Mapped[int] = mapped_column(unique=True)
+    file_id: Mapped[str | None] = mapped_column(default=None)
 
 
 class EpicDayModel(Base):
@@ -24,6 +25,7 @@ class EpicDayModel(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     date: Mapped[date_] = mapped_column(Date, unique=True)
     gif_message_id: Mapped[int | None] = mapped_column(unique=True, default=None)
+    file_id: Mapped[str | None] = mapped_column(default=None)
 
 
 class DigestModel(Base):
@@ -32,6 +34,7 @@ class DigestModel(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     date: Mapped[date_] = mapped_column(Date, unique=True)
     message_id: Mapped[int] = mapped_column(unique=True)
+    file_id: Mapped[str | None] = mapped_column(default=None)
 
 
 class WeeklyHighlightModel(Base):
@@ -40,6 +43,7 @@ class WeeklyHighlightModel(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     week_start_date: Mapped[date_] = mapped_column(Date, unique=True)
     message_id: Mapped[int] = mapped_column(unique=True)
+    file_id: Mapped[str | None] = mapped_column(default=None)
 
 
 class UserModel(Base):

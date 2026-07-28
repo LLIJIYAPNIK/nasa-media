@@ -22,11 +22,11 @@ class SqlAlchemyApodRepository(_SqlAlchemyRepository):
     async def get_by_date(self, day: date_) -> ApodEntry | None:
         async with self._session_factory() as session:
             model = await session.scalar(select(ApodModel).where(ApodModel.date == day))
-            return ApodEntry(date=model.date, message_id=model.message_id) if model else None
+            return ApodEntry(date=model.date, message_id=model.message_id, file_id=model.file_id) if model else None
 
     async def save(self, entry: ApodEntry) -> None:
         async with self._session_factory() as session:
-            session.add(ApodModel(date=entry.date, message_id=entry.message_id))
+            session.add(ApodModel(date=entry.date, message_id=entry.message_id, file_id=entry.file_id))
             await session.commit()
 
 
@@ -34,7 +34,9 @@ class SqlAlchemyEpicRepository(_SqlAlchemyRepository):
     async def get_by_date(self, day: date_) -> EpicDay | None:
         async with self._session_factory() as session:
             model = await self._get_model(session, day)
-            return EpicDay(date=model.date, gif_message_id=model.gif_message_id) if model else None
+            return (
+                EpicDay(date=model.date, gif_message_id=model.gif_message_id, file_id=model.file_id) if model else None
+            )
 
     async def save(self, day: EpicDay) -> None:
         async with self._session_factory() as session:
@@ -43,6 +45,7 @@ class SqlAlchemyEpicRepository(_SqlAlchemyRepository):
                 model = EpicDayModel(date=day.date)
                 session.add(model)
             model.gif_message_id = day.gif_message_id
+            model.file_id = day.file_id
             await session.commit()
 
     async def ensure_known_dates(self, days: Sequence[date_]) -> None:
@@ -64,11 +67,11 @@ class SqlAlchemyDigestRepository(_SqlAlchemyRepository):
     async def get_by_date(self, day: date_) -> DigestEntry | None:
         async with self._session_factory() as session:
             model = await session.scalar(select(DigestModel).where(DigestModel.date == day))
-            return DigestEntry(date=model.date, message_id=model.message_id) if model else None
+            return DigestEntry(date=model.date, message_id=model.message_id, file_id=model.file_id) if model else None
 
     async def save(self, entry: DigestEntry) -> None:
         async with self._session_factory() as session:
-            session.add(DigestModel(date=entry.date, message_id=entry.message_id))
+            session.add(DigestModel(date=entry.date, message_id=entry.message_id, file_id=entry.file_id))
             await session.commit()
 
 
@@ -79,14 +82,20 @@ class SqlAlchemyWeeklyHighlightsRepository(_SqlAlchemyRepository):
                 select(WeeklyHighlightModel).where(WeeklyHighlightModel.week_start_date == week_start_date)
             )
             return (
-                WeeklyHighlightEntry(week_start_date=model.week_start_date, message_id=model.message_id)
+                WeeklyHighlightEntry(
+                    week_start_date=model.week_start_date, message_id=model.message_id, file_id=model.file_id
+                )
                 if model
                 else None
             )
 
     async def save(self, entry: WeeklyHighlightEntry) -> None:
         async with self._session_factory() as session:
-            session.add(WeeklyHighlightModel(week_start_date=entry.week_start_date, message_id=entry.message_id))
+            session.add(
+                WeeklyHighlightModel(
+                    week_start_date=entry.week_start_date, message_id=entry.message_id, file_id=entry.file_id
+                )
+            )
             await session.commit()
 
 
