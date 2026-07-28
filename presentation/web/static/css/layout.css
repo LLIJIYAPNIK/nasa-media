@@ -71,7 +71,7 @@ html, body {
   gap: 5px;
   text-decoration: none;
   color: var(--color-text-faint);
-  font: 600 9px var(--font-body);
+  font: 600 9px var(--font-mono);
 }
 
 .nav-item--active {

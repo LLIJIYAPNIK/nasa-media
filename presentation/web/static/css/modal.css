@@ -107,7 +107,7 @@
 }
 
 .detail-modal-body dt {
-  font: 700 11px var(--font-body);
+  font: 700 11px var(--font-mono);
   letter-spacing: .5px;
   color: var(--color-accent-soft);
 }
