@@ -1,0 +1,73 @@
+/* Крупная Земля (85-90% экрана), смещена вправо — вариант 4b, см.
+   docs/tz/TZ-web.md. WebGL-канвас и CSS-фолбэк занимают один и тот же
+   мount-контейнер; ровно один из них виден в любой момент. */
+.earth-mount {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(70vw, 1100px);
+  height: 100vh;
+  z-index: 2;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+#earth-canvas {
+  position: absolute;
+  top: 50%;
+  right: -12%;
+  transform: translateY(-50%);
+  width: 130%;
+  aspect-ratio: 1 / 1;
+}
+
+#earth-canvas[hidden] {
+  display: none;
+}
+
+.earth-fallback {
+  position: absolute;
+  top: 50%;
+  right: -15%;
+  transform: translateY(-50%);
+  width: 90%;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  background-image: url("/static/textures/color.jpg");
+  background-size: 220% auto;
+  background-position: 0 50%;
+  box-shadow: 0 0 160px rgba(59, 130, 246, .25);
+  animation: earth-drift 240s linear infinite;
+}
+
+.earth-fallback[hidden] {
+  display: none;
+}
+
+@keyframes earth-drift {
+  from {
+    background-position: 0 50%;
+  }
+  to {
+    background-position: 100% 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .earth-fallback {
+    animation: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .earth-mount {
+    width: 100vw;
+    height: 55vh;
+    opacity: .55;
+  }
+
+  #earth-canvas,
+  .earth-fallback {
+    right: -25%;
+  }
+}
