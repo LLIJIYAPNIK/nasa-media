@@ -189,6 +189,25 @@ async def test_donki_client_returns_empty_list_when_no_notifications():
     assert highlights == []
 
 
+async def test_donki_client_fetch_for_range_covers_multiple_days():
+    session = FakeClientSession(
+        {
+            f"{DONKI_URL}?startDate=2024-01-01&endDate=2024-01-07&type=all&api_key=key": FakeResponse(
+                json_data=[
+                    {"messageType": "FLR", "messageIssueTime": "2024-01-02T10:00:00Z"},
+                    {"messageType": "GST", "messageIssueTime": "2024-01-05T08:00:00Z"},
+                ]
+            )
+        }
+    )
+    client = DonkiClient(session, "key", DONKI_URL)
+
+    highlights = await client.fetch_for_range(date(2024, 1, 1), date(2024, 1, 7))
+
+    assert len(highlights) == 2
+    assert {highlight.message_type for highlight in highlights} == {"FLR", "GST"}
+
+
 async def test_neows_client_parses_asteroids_for_the_day():
     session = FakeClientSession(
         {
@@ -237,6 +256,35 @@ async def test_neows_client_returns_empty_list_when_day_missing():
     asteroids = await client.fetch_for_day(date(2024, 1, 1))
 
     assert asteroids == []
+
+
+def _neows_object(name: str, diameter_max: float) -> dict:
+    return {
+        "name": name,
+        "estimated_diameter": {"meters": {"estimated_diameter_min": 5.0, "estimated_diameter_max": diameter_max}},
+        "close_approach_data": [{"miss_distance": {"kilometers": "100000.0", "lunar": "0.26"}}],
+        "is_potentially_hazardous_asteroid": False,
+    }
+
+
+async def test_neows_client_fetch_for_range_flattens_asteroids_across_days():
+    session = FakeClientSession(
+        {
+            f"{NEOWS_URL}?start_date=2024-01-01&end_date=2024-01-07&api_key=key": FakeResponse(
+                json_data={
+                    "near_earth_objects": {
+                        "2024-01-01": [_neows_object("First", 20.0)],
+                        "2024-01-05": [_neows_object("Second", 40.0)],
+                    }
+                }
+            )
+        }
+    )
+    client = NeoWsClient(session, "key", NEOWS_URL)
+
+    asteroids = await client.fetch_for_range(date(2024, 1, 1), date(2024, 1, 7))
+
+    assert {asteroid.name for asteroid in asteroids} == {"First", "Second"}
 
 
 async def test_eonet_client_does_not_send_api_key():

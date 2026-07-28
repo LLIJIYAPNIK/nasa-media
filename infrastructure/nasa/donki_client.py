@@ -21,12 +21,18 @@ class DonkiClient:
         self._base_url = base_url
 
     async def fetch_for_day(self, day: date_) -> Sequence[SpaceWeatherHighlight]:
+        return await self.fetch_for_range(day, day)
+
+    async def fetch_for_range(self, start: date_, end: date_) -> Sequence[SpaceWeatherHighlight]:
+        """DONKI принимает произвольный диапазон startDate/endDate за один
+        запрос (см. docs/tz/TZ-weekly-highlights.md) — fetch_for_day лишь
+        частный случай range из одного дня, не отдельная HTTP-логика."""
         data = await fetch_json(
             self._session,
             self._base_url,
             {
-                "startDate": day.isoformat(),
-                "endDate": day.isoformat(),
+                "startDate": start.isoformat(),
+                "endDate": end.isoformat(),
                 "type": "all",
                 "api_key": self._api_key,
             },
