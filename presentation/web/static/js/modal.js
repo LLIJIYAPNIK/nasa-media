@@ -100,6 +100,18 @@ function initModal() {
     return;
   }
 
+  dialog.addEventListener("click", (event) => {
+    const rect = dialog.getBoundingClientRect();
+    const inside =
+      event.clientY >= rect.top &&
+      event.clientY <= rect.bottom &&
+      event.clientX >= rect.left &&
+      event.clientX <= rect.right;
+    if (!inside) {
+      dialog.close();
+    }
+  });
+
   document.querySelectorAll("[data-kind]").forEach((button) => {
     button.addEventListener("click", async () => {
       const kind = button.dataset.kind;

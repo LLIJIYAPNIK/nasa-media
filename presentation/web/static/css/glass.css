@@ -51,7 +51,7 @@
   background: linear-gradient(160deg, rgba(255, 255, 255, .22), rgba(59, 130, 246, .14) 70%);
   border: 1px solid var(--color-glass-border);
   color: #dceafe;
-  font: 700 11px var(--font-body);
+  font: 700 11px var(--font-mono);
   letter-spacing: .8px;
   backdrop-filter: var(--blur-badge);
   -webkit-backdrop-filter: var(--blur-badge);
@@ -122,7 +122,7 @@
 }
 
 .stats-row-label {
-  font: 700 10px var(--font-body);
+  font: 700 10px var(--font-mono);
   letter-spacing: .8px;
   color: var(--color-accent-soft);
   white-space: nowrap;

@@ -18,8 +18,9 @@
   --color-glass-border-soft: rgba(255, 255, 255, .24);
   --color-glass-divider: rgba(255, 255, 255, .16);
 
-  --font-heading: 'Space Grotesk', system-ui, sans-serif;
+  --font-heading: 'Unbounded', system-ui, sans-serif;
   --font-body: Manrope, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
   --radius-lg: 20px;
   --radius-md: 12px;

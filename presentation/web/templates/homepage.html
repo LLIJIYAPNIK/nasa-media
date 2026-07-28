@@ -4,6 +4,11 @@
 <link rel="stylesheet" href="{{ url_for('static', path='css/modal.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', path='css/earth.css') }}">
 {% endblock %}
+{% block import_map %}
+<script type="importmap">
+{"imports": {"three": "https://unpkg.com/three@0.160.0/build/three.module.js"}}
+</script>
+{% endblock %}
 {% block content %}
 <div class="earth-mount" id="earth-mount" aria-hidden="true">
   <canvas id="earth-canvas"></canvas>
@@ -55,8 +60,5 @@
 {% block extra_js %}
 <script type="module" src="{{ url_for('static', path='js/stats.js') }}"></script>
 <script type="module" src="{{ url_for('static', path='js/modal.js') }}"></script>
-<script type="importmap">
-{"imports": {"three": "https://unpkg.com/three@0.160.0/build/three.module.js"}}
-</script>
 <script type="module" src="{{ url_for('static', path='js/earth.js') }}"></script>
 {% endblock %}
