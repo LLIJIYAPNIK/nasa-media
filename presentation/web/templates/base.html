@@ -12,7 +12,7 @@
 {% block import_map %}{% endblock %}
 </head>
 <body>
-<div class="stars" aria-hidden="true"></div>
+<canvas class="stars" aria-hidden="true"></canvas>
 <nav class="nav-rail" aria-label="Основная навигация">
   <a class="nav-logo" href="/" aria-label="nasa-media — главная">n</a>
   <ul class="nav-list">
@@ -29,6 +29,7 @@
 <main class="page-content">
 {% block content %}{% endblock %}
 </main>
+<script type="module" src="{{ url_for('static', path='js/starfield.js') }}"></script>
 {% block extra_js %}{% endblock %}
 </body>
 </html>
