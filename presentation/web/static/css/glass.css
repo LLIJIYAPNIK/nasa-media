@@ -129,6 +129,6 @@
 }
 
 .stats-row-value {
-  font: 700 15px var(--font-heading);
+  font: 700 15px var(--font-mono);
   text-align: right;
 }
