@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}nasa-media — данные NASA в реальном времени{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/modal.css') }}">
+{% endblock %}
+{% block content %}
+<section class="hero">
+  <span class="badge">ДАННЫЕ NASA · ОБНОВЛЯЮТСЯ КАЖДУЮ МИНУТУ</span>
+  <h1>Данные NASA — ближе, чем кажутся.</h1>
+  <p>Снимки, астероиды и космическая погода — без своего API-ключа NASA.</p>
+  <div class="hero-actions">
+    <a class="btn btn-primary" href="#stats">Исследовать данные →</a>
+    <a class="btn btn-glass" href="/weekly-highlights">Итоги недели</a>
+  </div>
+</section>
+
+<section class="stats-card" id="stats" role="group" aria-label="Ежедневная статистика" data-snapshot-url="/api/homepage/snapshot">
+  <button type="button" class="stats-row" data-kind="apod">
+    <span class="stats-row-label">APOD · ДЕНЬ {{ snapshot.apod_day_number }}</span>
+    <span class="stats-row-value" data-field="apod">Картинка дня</span>
+  </button>
+  <button type="button" class="stats-row" data-kind="asteroid">
+    <span class="stats-row-label">АСТЕРОИД СЕГОДНЯ</span>
+    <span class="stats-row-value" data-field="asteroid">
+      {% if snapshot.asteroid_name %}{{ snapshot.asteroid_name }} · {{ "%.1f"|format(snapshot.asteroid_miss_distance_lunar) }} л.р.{% else %}Нет данных{% endif %}
+    </span>
+  </button>
+  <button type="button" class="stats-row" data-kind="space-weather">
+    <span class="stats-row-label">DONKI</span>
+    <span class="stats-row-value" data-field="space-weather">{{ snapshot.space_weather_label or "Спокойно" }}</span>
+  </button>
+  <button type="button" class="stats-row" data-kind="earth-event">
+    <span class="stats-row-label">СОБЫТИЯ ЗЕМЛИ</span>
+    <span class="stats-row-value" data-field="earth-event">
+      {% if snapshot.earth_event_title %}{{ snapshot.earth_event_title }}{% else %}Нет данных{% endif %}
+    </span>
+  </button>
+</section>
+
+<dialog id="detail-modal" class="detail-modal" aria-labelledby="detail-modal-title">
+  <form method="dialog" class="detail-modal-header">
+    <button type="submit" class="detail-modal-close" aria-label="Закрыть">×</button>
+  </form>
+  <div class="detail-modal-body" id="detail-modal-body">
+    <p>Загрузка…</p>
+  </div>
+</dialog>
+{% endblock %}
+{% block extra_js %}
+<script type="module" src="{{ url_for('static', path='js/stats.js') }}"></script>
+<script type="module" src="{{ url_for('static', path='js/modal.js') }}"></script>
+{% endblock %}
