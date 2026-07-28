@@ -5,6 +5,7 @@ import pytest
 
 from domain.users.cosmic_facts import (
     MOON_REFERENCE_DATE,
+    build_cosmic_facts_lines,
     build_cosmic_facts_text,
     moon_phase_fraction,
     moon_phase_name,
@@ -81,3 +82,22 @@ def test_build_cosmic_facts_text_contains_all_planets_and_moon_phase():
     assert "венерианских" in text
     assert "марсианских" in text
     assert moon_phase_name(moon_phase_fraction(date(2020, 1, 1))) in text
+
+
+# --- build_cosmic_facts_lines / build_cosmic_facts_text regression ---
+
+
+def test_build_cosmic_facts_text_equals_joined_lines():
+    birthday, today = date(2000, 1, 1), date(2020, 1, 1)
+
+    lines = build_cosmic_facts_lines(birthday, today)
+    text = build_cosmic_facts_text(birthday, today)
+
+    assert text == "\n".join(lines)
+
+
+def test_build_cosmic_facts_lines_returns_list_of_strings():
+    lines = build_cosmic_facts_lines(date(2000, 1, 1), date(2020, 1, 1))
+
+    assert isinstance(lines, list)
+    assert all(isinstance(line, str) for line in lines)

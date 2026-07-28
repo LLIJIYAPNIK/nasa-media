@@ -92,9 +92,13 @@ class FakeUserRepository:
 class FakeGreetingSender:
     def __init__(self) -> None:
         self.sent: list[tuple[int, str]] = []
+        self.sent_images: list[tuple[int, bytes, str | None]] = []
 
     async def send_text(self, chat_id: int, text: str) -> None:
         self.sent.append((chat_id, text))
+
+    async def send_image(self, chat_id: int, image_bytes: bytes, caption: str | None = None) -> None:
+        self.sent_images.append((chat_id, image_bytes, caption))
 
 
 class FakeSpaceWeatherClient:

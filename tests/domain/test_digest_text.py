@@ -3,6 +3,7 @@ from datetime import date, datetime
 import pytest
 
 from domain.digest.digest_text import (
+    build_digest_lines,
     build_digest_text,
     pick_closest_asteroid,
     pick_latest_earth_event,
@@ -135,3 +136,22 @@ def test_build_digest_text_marks_hazardous_asteroid():
     text = build_digest_text(DAY, None, _asteroid("Dangerous", 100_000, hazardous=True), None, apod_cached=False)
 
     assert "потенциально опасен" in text
+
+
+# --- build_digest_lines / build_digest_text regression ---
+
+
+def test_build_digest_text_equals_joined_lines():
+    args = (DAY, _space_weather("GST", datetime(2026, 7, 27, 10)), _asteroid("Test", 200_000), None)
+
+    lines = build_digest_lines(*args, apod_cached=True)
+    text = build_digest_text(*args, apod_cached=True)
+
+    assert text == "\n".join(lines)
+
+
+def test_build_digest_lines_returns_list_of_strings():
+    lines = build_digest_lines(DAY, None, None, None, apod_cached=False)
+
+    assert isinstance(lines, list)
+    assert all(isinstance(line, str) for line in lines)

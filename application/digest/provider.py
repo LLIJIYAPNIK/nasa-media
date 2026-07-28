@@ -4,13 +4,14 @@ import asyncio
 from datetime import date as date_
 
 from application.digest.ports import NaturalEventClient, NearEarthObjectClient, SpaceWeatherClient
-from application.media.ports import ApodRepository, TextPayload
+from application.media.ports import ApodRepository, GeneratedImagePayload
 from domain.digest.digest_text import (
-    build_digest_text,
+    build_digest_lines,
     pick_closest_asteroid,
     pick_latest_earth_event,
     pick_significant_space_weather,
 )
+from infrastructure.files.card_builder import build_card
 
 
 class DigestProvider:
@@ -34,18 +35,21 @@ class DigestProvider:
         self._natural_event_client = natural_event_client
         self._apod_repo = apod_repo
 
-    async def fetch(self, day: date_) -> TextPayload:
+    async def fetch(self, day: date_) -> GeneratedImagePayload:
         space_weather_events, asteroids, earth_events, apod_entry = await asyncio.gather(
             self._space_weather_client.fetch_for_day(day),
             self._near_earth_object_client.fetch_for_day(day),
             self._natural_event_client.fetch_recent(),
             self._apod_repo.get_by_date(day),
         )
-        text = build_digest_text(
+        lines = build_digest_lines(
             day,
             pick_significant_space_weather(space_weather_events),
             pick_closest_asteroid(asteroids),
             pick_latest_earth_event(earth_events),
             apod_cached=apod_entry is not None,
         )
-        return TextPayload(text=text)
+        title, *body_lines = lines
+        body_lines = [line for line in body_lines if line]
+        image_bytes = await build_card(title=title, lines=body_lines)
+        return GeneratedImagePayload(image_bytes=image_bytes, caption=title)

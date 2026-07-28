@@ -69,13 +69,13 @@ def _format_earth_event(highlight: EarthEventHighlight | None) -> str:
     return f"🌍 {highlight.title} ({highlight.category})."
 
 
-def build_digest_text(
+def build_digest_lines(
     day: date_,
     space_weather: SpaceWeatherHighlight | None,
     asteroid: AsteroidHighlight | None,
     earth_event: EarthEventHighlight | None,
     apod_cached: bool,
-) -> str:
+) -> list[str]:
     lines = [
         f"🌌 Сводка за {day.isoformat()}",
         "",
@@ -86,4 +86,14 @@ def build_digest_text(
     if apod_cached:
         lines.append("")
         lines.append("🖼 Картинка дня APOD уже готова — загляни в раздел APOD!")
-    return "\n".join(lines)
+    return lines
+
+
+def build_digest_text(
+    day: date_,
+    space_weather: SpaceWeatherHighlight | None,
+    asteroid: AsteroidHighlight | None,
+    earth_event: EarthEventHighlight | None,
+    apod_cached: bool,
+) -> str:
+    return "\n".join(build_digest_lines(day, space_weather, asteroid, earth_event, apod_cached))
