@@ -5,7 +5,7 @@
   position: fixed;
   top: 0;
   right: 0;
-  width: min(70vw, 1100px);
+  width: min(88vw, 1500px);
   height: 100vh;
   z-index: 2;
   pointer-events: none;
@@ -35,32 +35,16 @@
   background-size: 220% auto;
   background-position: 0 50%;
   box-shadow: 0 0 160px rgba(59, 130, 246, .25);
-  animation: earth-drift 240s linear infinite;
 }
 
 .earth-fallback[hidden] {
   display: none;
 }
 
-@keyframes earth-drift {
-  from {
-    background-position: 0 50%;
-  }
-  to {
-    background-position: 100% 50%;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .earth-fallback {
-    animation: none;
-  }
-}
-
 @media (max-width: 768px) {
   .earth-mount {
     width: 100vw;
-    height: 55vh;
+    height: 62vh;
     opacity: .55;
   }
 
