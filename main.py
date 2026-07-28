@@ -127,13 +127,19 @@ async def main() -> None:
 
         deliver_apod = DeliverMediaForDate(
             GenericSourceAdapter(
-                apod_provider, apod_repo, admin_chat_gateway, lambda day, message_id: ApodEntry(day, message_id)
+                apod_provider,
+                apod_repo,
+                admin_chat_gateway,
+                lambda day, message_id, file_id: ApodEntry(day, message_id, file_id),
             )
         )
         deliver_epic = DeliverMediaForDate(EpicSourceAdapter(epic_provider, epic_repo, admin_chat_gateway))
         deliver_digest = DeliverMediaForDate(
             GenericSourceAdapter(
-                digest_provider, digest_repo, admin_chat_gateway, lambda day, message_id: DigestEntry(day, message_id)
+                digest_provider,
+                digest_repo,
+                admin_chat_gateway,
+                lambda day, message_id, file_id: DigestEntry(day, message_id, file_id),
             )
         )
         deliver_weekly_highlights = DeliverMediaForDate(
@@ -141,7 +147,7 @@ async def main() -> None:
                 weekly_highlights_provider,
                 weekly_highlights_repo,
                 admin_chat_gateway,
-                lambda day, message_id: WeeklyHighlightEntry(day, message_id),
+                lambda day, message_id, file_id: WeeklyHighlightEntry(day, message_id, file_id),
             )
         )
         deliver_apod_range = DeliverMediaForDateRange(deliver_apod)

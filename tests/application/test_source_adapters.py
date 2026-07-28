@@ -5,7 +5,7 @@ import pytest
 from application.media.ports import AnimationPayload, CachedMessageRef, SinglePhotoPayload
 from application.media.source_adapters import EpicSourceAdapter, GenericSourceAdapter
 from domain.digest.entities import WeeklyHighlightEntry
-from domain.media.entities import ApodEntry
+from domain.media.entities import ApodEntry, EpicDay
 from domain.media.exceptions import MediaNotAvailable
 from tests.application.fakes import (
     FakeAdminChatGateway,
@@ -21,19 +21,19 @@ def _apod_adapter(repo=None, gateway=None, provider=None) -> GenericSourceAdapte
         provider or FakeApodProvider(),
         repo or FakeApodRepository(),
         gateway or FakeAdminChatGateway(),
-        lambda day, message_id: ApodEntry(day, message_id),
+        lambda day, message_id, file_id: ApodEntry(day, message_id, file_id),
     )
 
 
 async def test_generic_adapter_returns_cached_ref_on_hit():
     repo = FakeApodRepository()
     day = date(2024, 1, 1)
-    await repo.save(ApodEntry(date=day, message_id=42))
+    await repo.save(ApodEntry(date=day, message_id=42, file_id="file-42"))
     adapter = _apod_adapter(repo=repo)
 
     cached = await adapter.get_cached(day)
 
-    assert cached == CachedMessageRef(message_id=42)
+    assert cached == CachedMessageRef(message_id=42, file_id="file-42")
 
 
 async def test_generic_adapter_is_a_cache_miss_when_never_fetched():
@@ -46,14 +46,14 @@ async def test_generic_adapter_fetches_publishes_and_persists_on_miss():
     repo = FakeApodRepository()
     day = date(2024, 1, 1)
     payload = SinglePhotoPayload(image_url="http://example.com/x.jpg", caption="caption")
-    gateway = FakeAdminChatGateway(ref=CachedMessageRef(message_id=99))
+    gateway = FakeAdminChatGateway(ref=CachedMessageRef(message_id=99, file_id="file-99"))
     adapter = _apod_adapter(repo=repo, gateway=gateway, provider=FakeApodProvider(payload=payload))
 
     ref = await adapter.fetch_and_cache(day)
 
-    assert ref == CachedMessageRef(message_id=99)
+    assert ref == CachedMessageRef(message_id=99, file_id="file-99")
     assert gateway.published == [payload]
-    assert await repo.get_by_date(day) == ApodEntry(date=day, message_id=99)
+    assert await repo.get_by_date(day) == ApodEntry(date=day, message_id=99, file_id="file-99")
 
 
 async def test_generic_adapter_forwards_via_gateway():
@@ -68,21 +68,21 @@ async def test_generic_adapter_forwards_via_gateway():
 async def test_generic_adapter_make_entry_works_with_a_differently_shaped_entry():
     """Прогон с WeeklyHighlightEntry (поле week_start_date, не date) —
     доказывает, что GenericSourceAdapter не завязан на конкретное имя поля
-    даты в Entry, только на make_entry(day, message_id)."""
+    даты в Entry, только на make_entry(day, message_id, file_id)."""
     repo = FakeWeeklyHighlightsRepository()
     week_start_date = date(2024, 1, 1)
-    gateway = FakeAdminChatGateway(ref=CachedMessageRef(message_id=11))
+    gateway = FakeAdminChatGateway(ref=CachedMessageRef(message_id=11, file_id="file-11"))
     adapter = GenericSourceAdapter(
         FakeApodProvider(payload=SinglePhotoPayload(image_url="http://x", caption="c")),
         repo,
         gateway,
-        lambda day, message_id: WeeklyHighlightEntry(day, message_id),
+        lambda day, message_id, file_id: WeeklyHighlightEntry(day, message_id, file_id),
     )
 
     await adapter.fetch_and_cache(week_start_date)
 
     assert await repo.get_by_date(week_start_date) == WeeklyHighlightEntry(
-        week_start_date=week_start_date, message_id=11
+        week_start_date=week_start_date, message_id=11, file_id="file-11"
     )
 
 
@@ -106,17 +106,30 @@ async def test_epic_adapter_fetches_and_caches_gif():
     repo = FakeEpicRepository()
     day = date(2024, 1, 1)
     await repo.ensure_known_dates([day])
-    gateway = FakeAdminChatGateway(ref=CachedMessageRef(message_id=55))
+    gateway = FakeAdminChatGateway(ref=CachedMessageRef(message_id=55, file_id="gif-file-55"))
     payload = AnimationPayload(gif_bytes=b"gif-bytes")
     adapter = EpicSourceAdapter(FakeApodProvider(payload=payload), repo, gateway)
 
     ref = await adapter.fetch_and_cache(day)
 
-    assert ref == CachedMessageRef(message_id=55)
+    assert ref == CachedMessageRef(message_id=55, file_id="gif-file-55")
     saved = await repo.get_by_date(day)
     assert saved is not None
     assert saved.gif_message_id == 55
+    assert saved.file_id == "gif-file-55"
     assert saved.is_cached is True
+
+
+async def test_epic_adapter_get_cached_propagates_file_id():
+    repo = FakeEpicRepository()
+    day = date(2024, 1, 1)
+    await repo.ensure_known_dates([day])
+    await repo.save(EpicDay(date=day, gif_message_id=55, file_id="gif-file-55"))
+    adapter = EpicSourceAdapter(FakeApodProvider(), repo, FakeAdminChatGateway())
+
+    cached = await adapter.get_cached(day)
+
+    assert cached == CachedMessageRef(message_id=55, file_id="gif-file-55")
 
 
 async def test_epic_adapter_forwards_via_gateway():

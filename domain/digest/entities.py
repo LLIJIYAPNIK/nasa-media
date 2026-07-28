@@ -8,9 +8,11 @@ from datetime import date as date_
 class DigestEntry:
     date: date_
     message_id: int
+    file_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
 class WeeklyHighlightEntry:
     week_start_date: date_
     message_id: int
+    file_id: str | None = None
