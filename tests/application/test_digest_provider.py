@@ -1,7 +1,11 @@
 from datetime import date, datetime
+from io import BytesIO
+from unittest.mock import AsyncMock, patch
+
+from PIL import Image
 
 from application.digest.provider import DigestProvider
-from application.media.ports import TextPayload
+from application.media.ports import GeneratedImagePayload
 from domain.digest.value_objects import SpaceWeatherHighlight
 from domain.media.entities import ApodEntry
 from tests.application.fakes import (
@@ -25,33 +29,47 @@ def _provider(
     )
 
 
-async def test_fetch_returns_text_payload():
+async def test_fetch_returns_generated_image_payload_with_valid_png():
     payload = await _provider().fetch(DAY)
 
-    assert isinstance(payload, TextPayload)
+    assert isinstance(payload, GeneratedImagePayload)
+    image = Image.open(BytesIO(payload.image_bytes))
+    assert image.format == "PNG"
+
+
+async def test_fetch_caption_is_the_title_line():
+    payload = await _provider().fetch(DAY)
+
+    assert payload.caption == f"🌌 Сводка за {DAY.isoformat()}"
 
 
 async def test_fetch_includes_apod_line_when_apod_already_cached():
     apod_repo = FakeApodRepository()
     await apod_repo.save(ApodEntry(date=DAY, message_id=1))
 
-    payload = await _provider(apod_repo=apod_repo).fetch(DAY)
+    with patch("application.digest.provider.build_card", new=AsyncMock(return_value=b"png")) as mock_build_card:
+        await _provider(apod_repo=apod_repo).fetch(DAY)
 
-    assert "APOD" in payload.text
+    lines = mock_build_card.await_args.kwargs["lines"]
+    assert any("APOD" in line for line in lines)
 
 
 async def test_fetch_omits_apod_line_when_apod_not_cached_yet():
-    payload = await _provider().fetch(DAY)
+    with patch("application.digest.provider.build_card", new=AsyncMock(return_value=b"png")) as mock_build_card:
+        await _provider().fetch(DAY)
 
-    assert "APOD" not in payload.text
+    lines = mock_build_card.await_args.kwargs["lines"]
+    assert not any("APOD" in line for line in lines)
 
 
 async def test_fetch_uses_significant_space_weather_in_text():
     space_weather_client = FakeSpaceWeatherClient([SpaceWeatherHighlight("GST", datetime(2024, 1, 1, 10))])
 
-    payload = await _provider(space_weather_client=space_weather_client).fetch(DAY)
+    with patch("application.digest.provider.build_card", new=AsyncMock(return_value=b"png")) as mock_build_card:
+        await _provider(space_weather_client=space_weather_client).fetch(DAY)
 
-    assert "Геомагнитная буря" in payload.text
+    lines = mock_build_card.await_args.kwargs["lines"]
+    assert any("Геомагнитная буря" in line for line in lines)
 
 
 async def test_fetch_queries_all_sources_for_the_requested_day():

@@ -1,7 +1,7 @@
 from datetime import date
 
 from application.digest.source_adapter import DigestSourceAdapter
-from application.media.ports import CachedMessageRef, TextPayload
+from application.media.ports import CachedMessageRef, GeneratedImagePayload
 from domain.digest.entities import DigestEntry
 from tests.application.fakes import FakeAdminChatGateway, FakeApodProvider, FakeDigestRepository
 
@@ -10,7 +10,7 @@ DAY = date(2024, 1, 1)
 
 def _adapter(digest_repo=None, gateway=None, provider=None) -> DigestSourceAdapter:
     return DigestSourceAdapter(
-        provider or FakeApodProvider(payload=TextPayload(text="сводка")),
+        provider or FakeApodProvider(payload=GeneratedImagePayload(image_bytes=b"png-bytes")),
         digest_repo or FakeDigestRepository(),
         gateway or FakeAdminChatGateway(),
     )
@@ -35,7 +35,7 @@ async def test_get_cached_is_a_miss_when_never_fetched():
 async def test_fetch_and_cache_publishes_provider_payload_and_persists_entry():
     digest_repo = FakeDigestRepository()
     gateway = FakeAdminChatGateway(ref=CachedMessageRef(message_id=99))
-    payload = TextPayload(text="сводка дня")
+    payload = GeneratedImagePayload(image_bytes=b"png-bytes-2")
     adapter = _adapter(digest_repo=digest_repo, gateway=gateway, provider=FakeApodProvider(payload=payload))
 
     ref = await adapter.fetch_and_cache(DAY)
