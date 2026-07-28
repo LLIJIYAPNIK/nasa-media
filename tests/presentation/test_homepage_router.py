@@ -45,6 +45,7 @@ async def test_homepage_returns_200_with_nav_and_hero_text():
     assert response.status_code == 200
     assert "Данные NASA — ближе, чем кажутся." in response.text
     assert 'id="earth-canvas"' in response.text
+    assert "fonts.googleapis.com" not in response.text
     for item in NAV_ITEMS:
         assert item["label"] in response.text
 

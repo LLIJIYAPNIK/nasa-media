@@ -14,11 +14,9 @@
 
 #earth-canvas {
   position: absolute;
-  top: 50%;
-  right: -12%;
-  transform: translateY(-50%);
-  width: 130%;
-  aspect-ratio: 1 / 1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
 }
 
 #earth-canvas[hidden] {
