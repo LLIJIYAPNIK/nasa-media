@@ -48,14 +48,23 @@ function renderAsteroid(detail) {
 }
 
 function renderSpaceWeather(detail) {
+  const items = (detail.space_weather_events ?? [])
+    .map(
+      (event) => `
+        <li>
+          <span class="detail-modal-event-label">${escapeHtml(event.label)}</span>
+          <span class="detail-modal-event-time">${escapeHtml(new Date(event.issued_at).toLocaleString("ru-RU"))}</span>
+        </li>
+      `
+    )
+    .join("");
+  const summaryTime = detail.space_weather_summary_issued_at
+    ? `, ${escapeHtml(new Date(detail.space_weather_summary_issued_at).toLocaleString("ru-RU"))}`
+    : "";
   return `
-    <h2 id="detail-modal-title">${escapeHtml(detail.space_weather_label)}</h2>
-    <dl>
-      <dt>Тип</dt>
-      <dd>${escapeHtml(detail.space_weather_type)}</dd>
-      <dt>Зафиксировано</dt>
-      <dd>${escapeHtml(new Date(detail.space_weather_issued_at).toLocaleString("ru-RU"))}</dd>
-    </dl>
+    <h2 id="detail-modal-title">${escapeHtml(KIND_TITLES["space-weather"])}</h2>
+    <ul class="detail-modal-event-list">${items}</ul>
+    <p class="detail-modal-summary">${escapeHtml(detail.space_weather_summary_label)}${summaryTime}</p>
   `;
 }
 

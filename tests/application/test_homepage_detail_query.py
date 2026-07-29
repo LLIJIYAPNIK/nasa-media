@@ -93,18 +93,46 @@ async def test_asteroid_detail_unavailable_when_no_asteroids():
     assert detail.message
 
 
-async def test_space_weather_detail_available_includes_type_and_time():
+async def test_space_weather_detail_available_includes_summary_type_and_time():
     event = SpaceWeatherHighlight("GST", datetime(2024, 1, 1, 10))
 
     detail = await _query(space_weather_client=FakeSpaceWeatherClient([event])).execute("space-weather", DAY)
 
     assert detail.available is True
-    assert detail.space_weather_type == "GST"
-    assert detail.space_weather_label == "Геомагнитная буря"
-    assert detail.space_weather_issued_at == datetime(2024, 1, 1, 10).isoformat()
+    assert detail.space_weather_summary_type == "GST"
+    assert detail.space_weather_summary_label == "Геомагнитная буря"
+    assert detail.space_weather_summary_issued_at == datetime(2024, 1, 1, 10).isoformat()
+    assert len(detail.space_weather_events) == 1
+    assert detail.space_weather_events[0].type == "GST"
+    assert detail.space_weather_events[0].label == "Геомагнитная буря"
+    assert detail.space_weather_events[0].issued_at == datetime(2024, 1, 1, 10).isoformat()
 
 
-async def test_space_weather_detail_unavailable_when_calm():
+async def test_space_weather_detail_lists_all_events_sorted_by_issued_at():
+    early = SpaceWeatherHighlight("FLR", datetime(2024, 1, 1, 8))
+    late = SpaceWeatherHighlight("GST", datetime(2024, 1, 1, 20))
+
+    detail = await _query(space_weather_client=FakeSpaceWeatherClient([late, early])).execute("space-weather", DAY)
+
+    assert detail.available is True
+    assert [event.type for event in detail.space_weather_events] == ["FLR", "GST"]
+    assert detail.space_weather_summary_type == "GST"
+
+
+async def test_space_weather_detail_available_but_calm_when_only_non_priority_events():
+    report = SpaceWeatherHighlight("Report", datetime(2024, 1, 1, 12))
+
+    detail = await _query(space_weather_client=FakeSpaceWeatherClient([report])).execute("space-weather", DAY)
+
+    assert detail.available is True
+    assert len(detail.space_weather_events) == 1
+    assert detail.space_weather_events[0].type == "Report"
+    assert detail.space_weather_summary_type is None
+    assert detail.space_weather_summary_label == "Спокойно"
+    assert detail.space_weather_summary_issued_at is None
+
+
+async def test_space_weather_detail_unavailable_when_no_events_at_all():
     detail = await _query().execute("space-weather", DAY)
 
     assert detail.available is False
