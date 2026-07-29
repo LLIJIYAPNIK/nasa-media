@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}APOD — nasa-media{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/modal.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/apod-gallery.css') }}">
+{% endblock %}
+{% block content %}
+<section class="apod-page">
+  <h1 class="apod-page-title">APOD</h1>
+  <p class="apod-page-subtitle">Картинка дня NASA — каждый выпуск с 16 июня 1995 года.</p>
+
+  <div class="apod-grid" id="apod-grid" data-limit="{{ page_size }}" data-next-cursor="{{ page.next_cursor or '' }}">
+    {% for item in page.items %}
+    <button type="button" class="apod-tile" data-date="{{ item.date }}" data-hdurl="{{ item.hdurl or '' }}">
+      <img class="apod-tile-image" src="{{ item.image_url }}" alt="{{ item.title }}" loading="lazy">
+      <span class="apod-tile-overlay">
+        {% if item.copyright %}<span class="apod-tile-copyright">© {{ item.copyright }}</span>{% endif %}
+        <span class="apod-tile-date">{{ item.date }}</span>
+        <span class="apod-tile-excerpt">{{ item.explanation }}</span>
+        <span class="btn btn-glass apod-tile-more">Читать больше</span>
+      </span>
+    </button>
+    {% endfor %}
+  </div>
+
+  <div id="apod-grid-sentinel" class="apod-grid-sentinel" aria-hidden="true"></div>
+</section>
+
+<dialog id="apod-detail-modal" class="detail-modal" aria-labelledby="apod-detail-modal-title">
+  <form method="dialog" class="detail-modal-header">
+    <button type="submit" class="detail-modal-close" aria-label="Закрыть">×</button>
+  </form>
+  <div class="detail-modal-body" id="apod-detail-modal-body"></div>
+</dialog>
+{% endblock %}
+{% block extra_js %}
+<script type="module" src="{{ url_for('static', path='js/apod_gallery.js') }}"></script>
+{% endblock %}
