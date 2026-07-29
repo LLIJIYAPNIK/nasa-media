@@ -3,6 +3,7 @@ from datetime import date, datetime
 import pytest
 
 from application.web.homepage_detail_query import GetHomepageDetail, UnknownHomepageDetailKind
+from domain.digest.speed_comparison import compare_speed_to_familiar_reference
 from domain.digest.value_objects import AsteroidHighlight, EarthEventHighlight, SpaceWeatherHighlight
 from infrastructure.nasa.apod_client import ApodData
 from tests.application.fakes import (
@@ -53,6 +54,13 @@ async def test_asteroid_detail_available_includes_full_diameter_range_and_compar
         miss_distance_km=340000.0,
         miss_distance_lunar=0.9,
         is_hazardous=True,
+        miss_distance_au=0.0023,
+        miss_distance_miles=211_266.6,
+        velocity_km_s=12.5,
+        velocity_km_h=45_000.0,
+        close_approach_time=datetime(2024, 1, 1, 10),
+        jpl_url="https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html#/?sstr=2024+YR4",
+        is_sentry_object=True,
     )
 
     detail = await _query(near_earth_object_client=FakeNearEarthObjectClient([asteroid])).execute("asteroid", DAY)
@@ -64,6 +72,15 @@ async def test_asteroid_detail_available_includes_full_diameter_range_and_compar
     assert detail.asteroid_size_comparison
     assert detail.asteroid_is_hazardous is True
     assert detail.asteroid_miss_distance_lunar == 0.9
+    assert detail.asteroid_miss_distance_km == 340000.0
+    assert detail.asteroid_miss_distance_au == 0.0023
+    assert detail.asteroid_miss_distance_miles == 211_266.6
+    assert detail.asteroid_velocity_km_s == 12.5
+    assert detail.asteroid_velocity_km_h == 45_000.0
+    assert detail.asteroid_speed_comparison == compare_speed_to_familiar_reference(12.5)
+    assert detail.asteroid_close_approach_time == datetime(2024, 1, 1, 10).isoformat()
+    assert detail.asteroid_jpl_url == "https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html#/?sstr=2024+YR4"
+    assert detail.asteroid_is_sentry_object is True
 
 
 async def test_asteroid_detail_unavailable_when_no_asteroids():
