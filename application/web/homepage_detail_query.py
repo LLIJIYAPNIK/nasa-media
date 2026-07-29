@@ -10,6 +10,7 @@ from application.digest.ports import NaturalEventClient, NearEarthObjectClient, 
 from application.web.homepage_query import SPACE_WEATHER_TYPE_LABELS
 from domain.digest.digest_text import pick_closest_asteroid, pick_latest_earth_event, pick_significant_space_weather
 from domain.digest.size_comparison import compare_to_familiar_object
+from domain.digest.speed_comparison import compare_speed_to_familiar_reference
 from domain.digest.value_objects import EarthEventHighlight, EventSource
 from domain.media.exceptions import MediaNotAvailable
 from infrastructure.nasa.apod_client import ApodData
@@ -56,6 +57,15 @@ class HomepageDetail:
     asteroid_size_comparison: str | None = None
     asteroid_is_hazardous: bool | None = None
     asteroid_miss_distance_lunar: float | None = None
+    asteroid_miss_distance_km: float | None = None
+    asteroid_miss_distance_au: float | None = None
+    asteroid_miss_distance_miles: float | None = None
+    asteroid_velocity_km_s: float | None = None
+    asteroid_velocity_km_h: float | None = None
+    asteroid_speed_comparison: str | None = None
+    asteroid_close_approach_time: str | None = None
+    asteroid_jpl_url: str | None = None
+    asteroid_is_sentry_object: bool | None = None
 
     space_weather_type: str | None = None
     space_weather_label: str | None = None
@@ -150,6 +160,15 @@ class GetHomepageDetail:
             asteroid_size_comparison=compare_to_familiar_object(asteroid.diameter_max_m),
             asteroid_is_hazardous=asteroid.is_hazardous,
             asteroid_miss_distance_lunar=asteroid.miss_distance_lunar,
+            asteroid_miss_distance_km=asteroid.miss_distance_km,
+            asteroid_miss_distance_au=asteroid.miss_distance_au,
+            asteroid_miss_distance_miles=asteroid.miss_distance_miles,
+            asteroid_velocity_km_s=asteroid.velocity_km_s,
+            asteroid_velocity_km_h=asteroid.velocity_km_h,
+            asteroid_speed_comparison=compare_speed_to_familiar_reference(asteroid.velocity_km_s),
+            asteroid_close_approach_time=asteroid.close_approach_time.isoformat(),
+            asteroid_jpl_url=asteroid.jpl_url,
+            asteroid_is_sentry_object=asteroid.is_sentry_object,
         )
 
     async def _space_weather_detail(self, today: date_) -> HomepageDetail:

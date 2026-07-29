@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from io import BytesIO
 
 import pytest
@@ -217,10 +217,26 @@ async def test_neows_client_parses_asteroids_for_the_day():
                         "2024-01-01": [
                             {
                                 "name": "Test Asteroid",
+                                "nasa_jpl_url": "https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html#/?sstr=Test",
+                                "is_sentry_object": True,
                                 "estimated_diameter": {
                                     "meters": {"estimated_diameter_min": 10.5, "estimated_diameter_max": 20.5}
                                 },
-                                "close_approach_data": [{"miss_distance": {"kilometers": "123456.7", "lunar": "0.32"}}],
+                                "close_approach_data": [
+                                    {
+                                        "epoch_date_close_approach": 1704110400000,
+                                        "relative_velocity": {
+                                            "kilometers_per_second": "12.34",
+                                            "kilometers_per_hour": "44424.0",
+                                        },
+                                        "miss_distance": {
+                                            "astronomical": "0.00082",
+                                            "lunar": "0.32",
+                                            "kilometers": "123456.7",
+                                            "miles": "76715.4",
+                                        },
+                                    }
+                                ],
                                 "is_potentially_hazardous_asteroid": True,
                             }
                         ]
@@ -241,6 +257,13 @@ async def test_neows_client_parses_asteroids_for_the_day():
     assert asteroid.miss_distance_km == 123456.7
     assert asteroid.miss_distance_lunar == 0.32
     assert asteroid.is_hazardous is True
+    assert asteroid.miss_distance_au == 0.00082
+    assert asteroid.miss_distance_miles == 76715.4
+    assert asteroid.velocity_km_s == 12.34
+    assert asteroid.velocity_km_h == 44424.0
+    assert asteroid.close_approach_time == datetime.fromtimestamp(1704110400000 / 1000, tz=UTC)
+    assert asteroid.jpl_url == "https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html#/?sstr=Test"
+    assert asteroid.is_sentry_object is True
 
 
 async def test_neows_client_returns_empty_list_when_day_missing():
@@ -261,8 +284,21 @@ async def test_neows_client_returns_empty_list_when_day_missing():
 def _neows_object(name: str, diameter_max: float) -> dict:
     return {
         "name": name,
+        "nasa_jpl_url": "https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html#/",
+        "is_sentry_object": False,
         "estimated_diameter": {"meters": {"estimated_diameter_min": 5.0, "estimated_diameter_max": diameter_max}},
-        "close_approach_data": [{"miss_distance": {"kilometers": "100000.0", "lunar": "0.26"}}],
+        "close_approach_data": [
+            {
+                "epoch_date_close_approach": 1704110400000,
+                "relative_velocity": {"kilometers_per_second": "10.0", "kilometers_per_hour": "36000.0"},
+                "miss_distance": {
+                    "astronomical": "0.00067",
+                    "lunar": "0.26",
+                    "kilometers": "100000.0",
+                    "miles": "62137.1",
+                },
+            }
+        ],
         "is_potentially_hazardous_asteroid": False,
     }
 

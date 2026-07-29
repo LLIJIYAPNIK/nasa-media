@@ -29,6 +29,13 @@ async def test_snapshot_with_all_four_sources_populated():
         miss_distance_km=340000.0,
         miss_distance_lunar=0.9,
         is_hazardous=False,
+        miss_distance_au=0.0023,
+        miss_distance_miles=211_266.6,
+        velocity_km_s=12.5,
+        velocity_km_h=45_000.0,
+        close_approach_time=datetime(2024, 1, 1, 10),
+        jpl_url="https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html#/",
+        is_sentry_object=False,
     )
     space_weather = SpaceWeatherHighlight("GST", datetime(2024, 1, 1, 10))
     earth_event = EarthEventHighlight("Tropical Storm", "Severe Storms", datetime(2024, 1, 1))
@@ -64,6 +71,13 @@ async def test_snapshot_with_mixed_sources():
         miss_distance_km=340000.0,
         miss_distance_lunar=0.9,
         is_hazardous=False,
+        miss_distance_au=0.0023,
+        miss_distance_miles=211_266.6,
+        velocity_km_s=12.5,
+        velocity_km_h=45_000.0,
+        close_approach_time=datetime(2024, 1, 1, 10),
+        jpl_url="https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html#/",
+        is_sentry_object=False,
     )
 
     snapshot = await _query(near_earth_object_client=FakeNearEarthObjectClient([asteroid])).execute(DAY)

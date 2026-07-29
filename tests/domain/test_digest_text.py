@@ -30,6 +30,13 @@ def _asteroid(
         miss_distance_km=miss_distance_km,
         miss_distance_lunar=miss_distance_km / 384_400,
         is_hazardous=hazardous,
+        miss_distance_au=miss_distance_km / 149_597_870.7,
+        miss_distance_miles=miss_distance_km / 1.60934,
+        velocity_km_s=10.0,
+        velocity_km_h=36_000.0,
+        close_approach_time=datetime(2026, 7, 27, 12),
+        jpl_url="https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html#/",
+        is_sentry_object=False,
     )
 
 

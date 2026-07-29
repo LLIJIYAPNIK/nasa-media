@@ -19,6 +19,13 @@ class AsteroidHighlight:
     miss_distance_km: float
     miss_distance_lunar: float
     is_hazardous: bool
+    miss_distance_au: float
+    miss_distance_miles: float
+    velocity_km_s: float
+    velocity_km_h: float
+    close_approach_time: datetime
+    jpl_url: str
+    is_sentry_object: bool
 
 
 @dataclass(frozen=True, slots=True)

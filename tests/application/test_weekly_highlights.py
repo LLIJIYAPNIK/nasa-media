@@ -21,6 +21,13 @@ def _asteroid(name: str, diameter_max_m: float) -> AsteroidHighlight:
         miss_distance_km=100_000.0,
         miss_distance_lunar=0.26,
         is_hazardous=False,
+        miss_distance_au=0.00067,
+        miss_distance_miles=62_137.1,
+        velocity_km_s=10.0,
+        velocity_km_h=36_000.0,
+        close_approach_time=datetime(2024, 1, 3, 12),
+        jpl_url="https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html#/",
+        is_sentry_object=False,
     )
 
 

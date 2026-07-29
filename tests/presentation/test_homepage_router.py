@@ -87,6 +87,7 @@ async def test_detail_endpoint_for_each_known_kind():
         body = response.json()
         assert body["kind"] == kind
         assert "available" in body
+    assert "asteroid_velocity_km_s" in body
 
 
 async def test_detail_endpoint_404_for_unknown_kind():
