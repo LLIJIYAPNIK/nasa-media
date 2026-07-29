@@ -6,11 +6,11 @@ from datetime import date as date_
 from application.media.ports import CachedMessageRef, MediaPayload
 from domain.digest.entities import DigestEntry, WeeklyHighlightEntry
 from domain.digest.value_objects import AsteroidHighlight, EarthEventHighlight, SpaceWeatherHighlight
-from domain.media.entities import ApodEntry, EpicDay
+from domain.media.entities import ApodEntry, ApodWebEntry, EpicDay
 from domain.media.exceptions import MediaNotAvailable
 from domain.media.value_objects import MediaSourceKind
 from domain.users.entities import User
-from infrastructure.nasa.apod_client import ApodData
+from infrastructure.nasa.apod_client import ApodData, ApodRangeItem
 
 
 class FakeApodRawClient:
@@ -31,6 +31,30 @@ class FakeApodRawClient:
             raise MediaNotAvailable("нет данных")
         assert self.data is not None, "FakeApodRawClient needs data when raise_not_available=False"
         return self.data
+
+
+class FakeApodRangeClient:
+    def __init__(self, items: Sequence[ApodRangeItem] | None = None) -> None:
+        self.items = items or []
+        self.range_calls: list[tuple[date_, date_]] = []
+
+    async def fetch_for_range(self, start: date_, end: date_) -> Sequence[ApodRangeItem]:
+        self.range_calls.append((start, end))
+        return [item for item in self.items if start <= item.date <= end]
+
+
+class FakeApodWebCacheRepository:
+    def __init__(self, entries: Sequence[ApodWebEntry] | None = None) -> None:
+        self._storage: dict[date_, ApodWebEntry] = {entry.date: entry for entry in (entries or [])}
+        self.save_many_calls: list[list[ApodWebEntry]] = []
+
+    async def get_by_dates(self, dates: Sequence[date_]) -> dict[date_, ApodWebEntry]:
+        return {day: self._storage[day] for day in dates if day in self._storage}
+
+    async def save_many(self, entries: Sequence[ApodWebEntry]) -> None:
+        self.save_many_calls.append(list(entries))
+        for entry in entries:
+            self._storage[entry.date] = entry
 
 
 class FakeApodProvider:
