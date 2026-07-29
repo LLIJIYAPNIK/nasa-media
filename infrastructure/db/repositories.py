@@ -7,10 +7,17 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from domain.digest.entities import DigestEntry, WeeklyHighlightEntry
-from domain.media.entities import ApodEntry, EpicDay
+from domain.media.entities import ApodEntry, ApodWebEntry, EpicDay
 from domain.media.value_objects import MediaSourceKind
 from domain.users.entities import SUBSCRIPTION_FIELDS, User
-from infrastructure.db.models import ApodModel, DigestModel, EpicDayModel, UserModel, WeeklyHighlightModel
+from infrastructure.db.models import (
+    ApodModel,
+    ApodWebEntryModel,
+    DigestModel,
+    EpicDayModel,
+    UserModel,
+    WeeklyHighlightModel,
+)
 
 
 class _SqlAlchemyRepository:
@@ -27,6 +34,46 @@ class SqlAlchemyApodRepository(_SqlAlchemyRepository):
     async def save(self, entry: ApodEntry) -> None:
         async with self._session_factory() as session:
             session.add(ApodModel(date=entry.date, message_id=entry.message_id, file_id=entry.file_id))
+            await session.commit()
+
+
+class SqlAlchemyApodWebCacheRepository(_SqlAlchemyRepository):
+    """Кеш содержимого APOD для веб-сетки (docs/tz/TZ-web-apod.md) —
+    отдельная таблица от SqlAlchemyApodRepository (Telegram-кеш пересылки),
+    см. ApodWebEntryModel."""
+
+    async def get_by_dates(self, dates: Sequence[date_]) -> dict[date_, ApodWebEntry]:
+        if not dates:
+            return {}
+        async with self._session_factory() as session:
+            models = await session.scalars(select(ApodWebEntryModel).where(ApodWebEntryModel.date.in_(dates)))
+            return {
+                model.date: ApodWebEntry(
+                    date=model.date,
+                    title=model.title,
+                    explanation=model.explanation,
+                    copyright=model.copyright,
+                    image_url=model.image_url,
+                    hdurl=model.hdurl,
+                )
+                for model in models
+            }
+
+    async def save_many(self, entries: Sequence[ApodWebEntry]) -> None:
+        if not entries:
+            return
+        async with self._session_factory() as session:
+            session.add_all(
+                ApodWebEntryModel(
+                    date=entry.date,
+                    title=entry.title,
+                    explanation=entry.explanation,
+                    copyright=entry.copyright,
+                    image_url=entry.image_url,
+                    hdurl=entry.hdurl,
+                )
+                for entry in entries
+            )
             await session.commit()
 
 
