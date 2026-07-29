@@ -150,7 +150,27 @@ function renderAsteroid(detail) {
   return { html, afterRender };
 }
 
+function renderSpaceWeatherCalm(detail) {
+  return `
+    <h2 id="detail-modal-title">${escapeHtml(KIND_TITLES["space-weather"])}</h2>
+    <div class="calm-state">
+      <span class="calm-state-icon" aria-hidden="true">🌤️</span>
+      <p class="calm-state-headline">${escapeHtml(detail.message)}</p>
+      <p class="calm-state-note">
+        Это обычное состояние: активность Солнца цикличная, и заметные вспышки,
+        геомагнитные бури и выбросы вещества случаются далеко не каждый день —
+        NASA DONKI фиксирует их эпизодически. Загляните сюда в другой день —
+        возможно, застанете что-то более активное.
+      </p>
+    </div>
+  `;
+}
+
 function renderSpaceWeather(detail) {
+  if (!detail.available) {
+    return renderSpaceWeatherCalm(detail);
+  }
+
   const events = detail.space_weather_events ?? [];
   const list = events
     .map(
@@ -246,7 +266,9 @@ const RENDERERS = {
 };
 
 function renderDetail(detail) {
-  if (!detail.available) {
+  // space-weather рендерит собственное available=false состояние (calm-state,
+  // см. docs/tz/TZ-space-weather-calm-state.md) — не заходит в общую ветку.
+  if (detail.kind !== "space-weather" && !detail.available) {
     return { html: renderUnavailable(detail) };
   }
   return RENDERERS[detail.kind](detail);

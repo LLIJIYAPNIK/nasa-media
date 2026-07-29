@@ -187,6 +187,33 @@
   margin: 0;
 }
 
+.calm-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  padding: 12px 0 4px;
+}
+
+.calm-state-icon {
+  font-size: 48px;
+  line-height: 1;
+}
+
+.calm-state-headline {
+  font: 700 17px/1.4 var(--font-heading);
+  color: var(--color-text);
+  margin: 0;
+}
+
+.calm-state-note {
+  font: 400 14px/1.65 var(--font-body);
+  color: var(--color-text-dim);
+  max-width: 46ch;
+  margin: 0;
+}
+
 .event-pills {
   display: flex;
   flex-wrap: wrap;
