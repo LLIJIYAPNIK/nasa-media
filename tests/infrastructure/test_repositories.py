@@ -1,10 +1,11 @@
 from datetime import date
 
 from domain.digest.entities import DigestEntry, WeeklyHighlightEntry
-from domain.media.entities import ApodEntry, EpicDay
+from domain.media.entities import ApodEntry, ApodWebEntry, EpicDay
 from domain.media.value_objects import MediaSourceKind
 from infrastructure.db.repositories import (
     SqlAlchemyApodRepository,
+    SqlAlchemyApodWebCacheRepository,
     SqlAlchemyDigestRepository,
     SqlAlchemyEpicRepository,
     SqlAlchemyUserRepository,
@@ -32,6 +33,54 @@ async def test_apod_repository_file_id_roundtrip(session_factory):
     entry = await repo.get_by_date(day)
     assert entry is not None
     assert entry.file_id == "apod-file-10"
+
+
+async def test_apod_web_cache_repository_get_by_dates_empty_table(session_factory):
+    repo = SqlAlchemyApodWebCacheRepository(session_factory)
+
+    assert await repo.get_by_dates([date(2024, 1, 1)]) == {}
+
+
+async def test_apod_web_cache_repository_save_many_and_get_by_dates_roundtrip(session_factory):
+    repo = SqlAlchemyApodWebCacheRepository(session_factory)
+    first = ApodWebEntry(
+        date=date(2024, 1, 1),
+        title="Title1",
+        explanation="Text1",
+        copyright=None,
+        image_url="http://img1",
+        hdurl=None,
+    )
+    second = ApodWebEntry(
+        date=date(2024, 1, 2),
+        title="Title2",
+        explanation="Text2",
+        copyright="Jane",
+        image_url="http://img2",
+        hdurl="http://img2-hd",
+    )
+
+    await repo.save_many([first, second])
+
+    result = await repo.get_by_dates([date(2024, 1, 1), date(2024, 1, 2)])
+    assert result == {date(2024, 1, 1): first, date(2024, 1, 2): second}
+
+
+async def test_apod_web_cache_repository_get_by_dates_returns_only_found(session_factory):
+    repo = SqlAlchemyApodWebCacheRepository(session_factory)
+    entry = ApodWebEntry(
+        date=date(2024, 1, 1),
+        title="Title1",
+        explanation="Text1",
+        copyright=None,
+        image_url="http://img1",
+        hdurl=None,
+    )
+    await repo.save_many([entry])
+
+    result = await repo.get_by_dates([date(2024, 1, 1), date(2024, 1, 2)])
+
+    assert result == {date(2024, 1, 1): entry}
 
 
 async def test_epic_repository_ensure_known_dates_is_idempotent(session_factory):

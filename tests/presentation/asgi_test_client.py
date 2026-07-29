@@ -27,16 +27,22 @@ async def asgi_get(app: Any, path: str) -> ASGIResponse:
     современным starlette.testclient — а трогать перевод вне скоупа этой
     фичи (см. docs/tz/TZ-web.md). Для простых GET-запросов без вебсокетов/
     стриминга голого ASGI-протокола достаточно.
+
+    `path` может содержать query-строку (`?before=...`) — она вырезается и
+    прокидывается отдельным полем scope, как того требует ASGI (нужно для
+    docs/tz/TZ-web-apod.md, GET /api/apod/entries?before=&limit=).
     """
+
+    raw_path, _, query_string = path.partition("?")
 
     scope = {
         "type": "http",
         "asgi": {"version": "3.0"},
         "http_version": "1.1",
         "method": "GET",
-        "path": path,
-        "raw_path": path.encode(),
-        "query_string": b"",
+        "path": raw_path,
+        "raw_path": raw_path.encode(),
+        "query_string": query_string.encode(),
         "headers": [],
         "server": ("testserver", 80),
         "client": ("testclient", 123),
