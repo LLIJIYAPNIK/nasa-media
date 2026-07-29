@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import date as date_
+from datetime import timedelta
 from typing import Protocol
 
 from application.digest.ports import NaturalEventClient, NearEarthObjectClient, SpaceWeatherClient
@@ -82,12 +83,30 @@ class GetHomepageDetail:
         try:
             data = await self._apod_client.fetch_raw(today)
         except MediaNotAvailable:
+            return await self._apod_detail_fallback_to_previous_day(today)
+        return HomepageDetail(
+            kind="apod",
+            available=True,
+            apod_title=data.title,
+            apod_description=data.explanation,
+            apod_image_url=data.image_url,
+            apod_copyright=data.copyright,
+        )
+
+    async def _apod_detail_fallback_to_previous_day(self, today: date_) -> HomepageDetail:
+        # NASA иногда публикует APOD за сегодня с задержкой (часовые пояса,
+        # ручная модерация) — вместо пустой модалки показываем вчерашнюю
+        # картинку с пояснением, а не оставляем карточку без содержимого.
+        try:
+            data = await self._apod_client.fetch_raw(today - timedelta(days=1))
+        except MediaNotAvailable:
             return HomepageDetail(
                 kind="apod", available=False, message="Картинка дня на сегодня ещё не опубликована NASA."
             )
         return HomepageDetail(
             kind="apod",
             available=True,
+            message="Картинка дня на сегодня ещё не опубликована NASA — показываем вчерашнюю.",
             apod_title=data.title,
             apod_description=data.explanation,
             apod_image_url=data.image_url,

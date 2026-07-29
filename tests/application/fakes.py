@@ -14,14 +14,20 @@ from infrastructure.nasa.apod_client import ApodData
 
 
 class FakeApodRawClient:
-    def __init__(self, data: ApodData | None = None, raise_not_available: bool = False) -> None:
+    def __init__(
+        self,
+        data: ApodData | None = None,
+        raise_not_available: bool = False,
+        unavailable_days: Sequence[date_] = (),
+    ) -> None:
         self.data = data
         self.raise_not_available = raise_not_available
+        self.unavailable_days = set(unavailable_days)
         self.calls: list[date_] = []
 
     async def fetch_raw(self, day: date_) -> ApodData:
         self.calls.append(day)
-        if self.raise_not_available:
+        if self.raise_not_available or day in self.unavailable_days:
             raise MediaNotAvailable("нет данных")
         assert self.data is not None, "FakeApodRawClient needs data when raise_not_available=False"
         return self.data
