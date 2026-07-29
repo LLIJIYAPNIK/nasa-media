@@ -4,6 +4,7 @@ from collections.abc import Sequence
 from datetime import date as date_
 
 from application.media.ports import CachedMessageRef, MediaPayload
+from application.web.epic_page_query import EpicTexture
 from domain.digest.entities import DigestEntry, WeeklyHighlightEntry
 from domain.digest.value_objects import AsteroidHighlight, EarthEventHighlight, SpaceWeatherHighlight
 from domain.media.entities import ApodEntry, EpicDay
@@ -181,6 +182,26 @@ class FakeDigestRepository:
 
     async def save(self, entry: DigestEntry) -> None:
         self._storage[entry.date] = entry
+
+
+class FakeEpicAvailability:
+    def __init__(self, known_dates: Sequence[date_] | None = None) -> None:
+        self.known_dates = known_dates or []
+        self.calls = 0
+
+    async def fetch_known_dates(self) -> Sequence[date_]:
+        self.calls += 1
+        return self.known_dates
+
+
+class FakeEpicTextureBuilder:
+    def __init__(self, texture: EpicTexture | None = None) -> None:
+        self.texture = texture
+        self.built_for: list[date_] = []
+
+    async def build(self, day: date_) -> EpicTexture | None:
+        self.built_for.append(day)
+        return self.texture
 
 
 class FakeWeeklyHighlightsRepository:
