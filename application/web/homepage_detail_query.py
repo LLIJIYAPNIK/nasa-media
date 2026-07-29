@@ -37,6 +37,16 @@ class EventMapBuilder(Protocol):
 
 
 @dataclass(frozen=True, slots=True)
+class SpaceWeatherEventItem:
+    """Один пункт полного списка DONKI-уведомлений за день в модалке —
+    см. docs/tz/TZ-web-space-weather-detail.md."""
+
+    type: str
+    label: str
+    issued_at: str
+
+
+@dataclass(frozen=True, slots=True)
 class HomepageDetail:
     """Полное содержимое модалки для одной из 4 карточек ежедневной
     статистики. Плоская структура с полями под все 4 kind сразу — проще
@@ -67,9 +77,10 @@ class HomepageDetail:
     asteroid_jpl_url: str | None = None
     asteroid_is_sentry_object: bool | None = None
 
-    space_weather_type: str | None = None
-    space_weather_label: str | None = None
-    space_weather_issued_at: str | None = None
+    space_weather_events: list[SpaceWeatherEventItem] | None = None
+    space_weather_summary_type: str | None = None
+    space_weather_summary_label: str | None = None
+    space_weather_summary_issued_at: str | None = None
 
     earth_event_title: str | None = None
     earth_event_category: str | None = None
@@ -173,15 +184,28 @@ class GetHomepageDetail:
 
     async def _space_weather_detail(self, today: date_) -> HomepageDetail:
         events = await self._space_weather_client.fetch_for_day(today)
-        event = pick_significant_space_weather(events)
-        if event is None:
+        if not events:
             return HomepageDetail(kind="space-weather", available=False, message="Космос сегодня спокоен.")
+
+        significant = pick_significant_space_weather(events)
         return HomepageDetail(
             kind="space-weather",
             available=True,
-            space_weather_type=event.message_type,
-            space_weather_label=SPACE_WEATHER_TYPE_LABELS.get(event.message_type, event.message_type),
-            space_weather_issued_at=event.issued_at.isoformat(),
+            space_weather_events=[
+                SpaceWeatherEventItem(
+                    type=event.message_type,
+                    label=SPACE_WEATHER_TYPE_LABELS.get(event.message_type, event.message_type),
+                    issued_at=event.issued_at.isoformat(),
+                )
+                for event in sorted(events, key=lambda event: event.issued_at)
+            ],
+            space_weather_summary_type=significant.message_type if significant else None,
+            space_weather_summary_label=(
+                SPACE_WEATHER_TYPE_LABELS.get(significant.message_type, significant.message_type)
+                if significant
+                else "Спокойно"
+            ),
+            space_weather_summary_issued_at=significant.issued_at.isoformat() if significant else None,
         )
 
     async def _earth_event_detail(self, _today: date_) -> HomepageDetail:
