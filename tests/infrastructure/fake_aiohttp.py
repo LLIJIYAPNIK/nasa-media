@@ -57,3 +57,45 @@ class FakeClientSession:
 
     async def __aexit__(self, exc_type, exc, tb) -> bool:
         return False
+
+
+class AnyUrlClientSession:
+    """Как FakeClientSession, но отдаёт один и тот же фейковый ответ на
+    любой GET — для клиентов, которые бьют по неизвестному заранее набору
+    URL (тайлы карт: z/x/y перебираются кодом, не тестом)."""
+
+    def __init__(self, response_body: bytes) -> None:
+        self._response_body = response_body
+        self.requested_urls: list[str] = []
+        self.last_headers: dict | None = None
+
+    def get(self, url: str, params: dict | None = None, **kwargs: Any) -> FakeResponse:
+        self.requested_urls.append(build_url(url, params))
+        self.last_headers = kwargs.get("headers")
+        return FakeResponse(body=self._response_body)
+
+    async def __aenter__(self) -> AnyUrlClientSession:
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb) -> bool:
+        return False
+
+
+class FailingClientSession:
+    """Симулирует сетевую ошибку (не HTTP-статус — реальный
+    aiohttp.ClientError, в отличие от FakeResponse.raise_for_status(),
+    который для простоты тестов бросает RuntimeError)."""
+
+    def __init__(self, exc: BaseException) -> None:
+        self._exc = exc
+        self.requested_urls: list[str] = []
+
+    def get(self, url: str, params: dict | None = None, **kwargs: Any) -> FakeResponse:
+        self.requested_urls.append(build_url(url, params))
+        raise self._exc
+
+    async def __aenter__(self) -> FailingClientSession:
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb) -> bool:
+        return False

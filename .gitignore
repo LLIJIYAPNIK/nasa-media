@@ -16,3 +16,6 @@ __pycache__/
 epic_folder/
 temp_image*.jpg
 *.log
+
+# Дисковый кеш веба (см. infrastructure/web/event_map_cache.py)
+var/

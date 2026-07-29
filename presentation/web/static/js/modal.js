@@ -74,9 +74,11 @@ function renderUnavailable(detail) {
 }
 
 function renderApod(detail) {
+  const notice = detail.message ? `<p class="detail-modal-notice">${escapeHtml(detail.message)}</p>` : "";
   const copyright = detail.apod_copyright ? `<p>© ${escapeHtml(detail.apod_copyright)}</p>` : "";
   return `
     <h2 id="detail-modal-title">${escapeHtml(detail.apod_title)}</h2>
+    ${notice}
     <img src="${escapeHtml(detail.apod_image_url)}" alt="${escapeHtml(detail.apod_title)}">
     <p>${escapeHtml(detail.apod_description)}</p>
     ${copyright}
@@ -161,14 +163,67 @@ function renderSpaceWeather(detail) {
 }
 
 function renderEarthEvent(detail) {
+  const categories = detail.earth_event_categories && detail.earth_event_categories.length
+    ? detail.earth_event_categories
+    : [detail.earth_event_category].filter(Boolean);
+  const pills = categories
+    .map((category) => `<a class="event-pill" href="/earth-events?category=${encodeURIComponent(category)}">${escapeHtml(category)}</a>`)
+    .join("");
+
+  const status = detail.earth_event_closed_at
+    ? `Завершено · ${escapeHtml(new Date(detail.earth_event_closed_at).toLocaleDateString("ru-RU"))}`
+    : "Активно";
+
+  const description = detail.earth_event_description
+    ? `<p>${escapeHtml(detail.earth_event_description)}</p>`
+    : `<p class="detail-modal-notice">Описание отсутствует.</p>`;
+
+  const map = detail.earth_event_map_url
+    ? `
+      <img src="${escapeHtml(detail.earth_event_map_url)}" alt="Карта: ${escapeHtml(detail.earth_event_title)}">
+      <p class="event-map-credit">© OpenStreetMap contributors</p>
+    `
+    : "";
+
+  const magnitude = detail.earth_event_magnitude_value != null
+    ? `
+      <dl class="event-magnitude">
+        <dt>Магнитуда</dt>
+        <dd>${detail.earth_event_magnitude_value} ${escapeHtml(detail.earth_event_magnitude_unit ?? "")}${
+          detail.earth_event_magnitude_description ? " · " + escapeHtml(detail.earth_event_magnitude_description) : ""
+        }</dd>
+      </dl>
+    `
+    : "";
+
+  const sources = detail.earth_event_sources ?? [];
+  const sourcesList = sources.length
+    ? `
+      <h3>Источники</h3>
+      <ul class="event-sources">
+        ${sources
+          .map(
+            (source) =>
+              `<li><a href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(source.label || source.url)}</a></li>`
+          )
+          .join("")}
+      </ul>
+    `
+    : "";
+
+  const link = detail.earth_event_link
+    ? `<p><a href="${escapeHtml(detail.earth_event_link)}" target="_blank" rel="noopener noreferrer">Открыть на EONET →</a></p>`
+    : "";
+
   return `
+    <div class="event-pills">${pills}</div>
     <h2 id="detail-modal-title">${escapeHtml(detail.earth_event_title)}</h2>
-    <dl>
-      <dt>Категория</dt>
-      <dd>${escapeHtml(detail.earth_event_category)}</dd>
-      <dt>Дата</dt>
-      <dd>${escapeHtml(new Date(detail.earth_event_date).toLocaleDateString("ru-RU"))}</dd>
-    </dl>
+    <p class="event-status">${status} · ${escapeHtml(new Date(detail.earth_event_date).toLocaleDateString("ru-RU"))}</p>
+    ${description}
+    ${map}
+    ${magnitude}
+    ${sourcesList}
+    ${link}
   `;
 }
 

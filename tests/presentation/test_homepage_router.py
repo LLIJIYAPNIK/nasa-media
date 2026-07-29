@@ -6,10 +6,12 @@ from fastapi.templating import Jinja2Templates
 
 from application.web.homepage_detail_query import GetHomepageDetail
 from application.web.homepage_query import GetHomepageSnapshot
+from infrastructure.web.event_map_cache import EventMapFileCache
 from infrastructure.web.snapshot_cache import SnapshotCache
 from presentation.web.routers.homepage_router import NAV_ITEMS, PLACEHOLDER_SECTIONS, build_homepage_router
 from tests.application.fakes import (
     FakeApodRawClient,
+    FakeEventMapBuilder,
     FakeNaturalEventClient,
     FakeNearEarthObjectClient,
     FakeSpaceWeatherClient,
@@ -19,21 +21,32 @@ from tests.presentation.asgi_test_client import asgi_get
 WEB_DIR = Path(__file__).resolve().parents[2] / "presentation" / "web"
 
 
-def _build_app(apod_client=None, space_weather_client=None, near_earth_object_client=None, natural_event_client=None):
+def _build_app(
+    apod_client=None,
+    space_weather_client=None,
+    near_earth_object_client=None,
+    natural_event_client=None,
+    event_map_builder=None,
+    event_map_cache=None,
+):
     space_weather_client = space_weather_client or FakeSpaceWeatherClient()
     near_earth_object_client = near_earth_object_client or FakeNearEarthObjectClient()
     natural_event_client = natural_event_client or FakeNaturalEventClient()
     apod_client = apod_client or FakeApodRawClient(raise_not_available=True)
+    event_map_builder = event_map_builder or FakeEventMapBuilder(cache_key=None)
+    event_map_cache = event_map_cache or EventMapFileCache()
 
     get_snapshot = GetHomepageSnapshot(space_weather_client, near_earth_object_client, natural_event_client)
-    get_detail = GetHomepageDetail(apod_client, space_weather_client, near_earth_object_client, natural_event_client)
+    get_detail = GetHomepageDetail(
+        apod_client, space_weather_client, near_earth_object_client, natural_event_client, event_map_builder
+    )
     cache = SnapshotCache()
 
     app = FastAPI()
     templates = Jinja2Templates(directory=WEB_DIR / "templates")
     templates.env.globals["nav_items"] = NAV_ITEMS
     app.mount("/static", StaticFiles(directory=WEB_DIR / "static"), name="static")
-    app.include_router(build_homepage_router(templates, get_snapshot, get_detail, cache))
+    app.include_router(build_homepage_router(templates, get_snapshot, get_detail, cache, event_map_cache))
     return app
 
 
@@ -81,6 +94,26 @@ async def test_detail_endpoint_404_for_unknown_kind():
     app = _build_app()
 
     response = await asgi_get(app, "/api/homepage/details/weekly-highlights")
+
+    assert response.status_code == 404
+
+
+async def test_earth_event_map_route_serves_cached_png(tmp_path):
+    event_map_cache = EventMapFileCache(directory=tmp_path)
+    await event_map_cache.set("EONET_1_2024-01-01", b"fake-png-bytes")
+    app = _build_app(event_map_cache=event_map_cache)
+
+    response = await asgi_get(app, "/api/homepage/earth-event-map/EONET_1_2024-01-01.png")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/png"
+    assert response.body == b"fake-png-bytes"
+
+
+async def test_earth_event_map_route_404_when_not_cached(tmp_path):
+    app = _build_app(event_map_cache=EventMapFileCache(directory=tmp_path))
+
+    response = await asgi_get(app, "/api/homepage/earth-event-map/EONET_missing_2024-01-01.png")
 
     assert response.status_code == 404
 

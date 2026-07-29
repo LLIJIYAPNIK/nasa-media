@@ -333,6 +333,10 @@ async def test_eonet_client_does_not_send_api_key():
     assert "api_key" not in session.requested_urls[0]
 
 
+def _storm_geometry_point(day: int, lon: float = -80.0, lat: float = 25.0, **extra) -> dict:
+    return {"date": f"2024-01-{day:02d}T00:00:00Z", "coordinates": [lon, lat], **extra}
+
+
 async def test_eonet_client_picks_max_geometry_date_per_event():
     session = FakeClientSession(
         {
@@ -340,12 +344,13 @@ async def test_eonet_client_picks_max_geometry_date_per_event():
                 json_data={
                     "events": [
                         {
+                            "id": "EONET_1",
                             "title": "Tropical Storm",
                             "categories": [{"id": "severeStorms", "title": "Severe Storms"}],
                             "geometry": [
-                                {"date": "2024-01-01T00:00:00Z"},
-                                {"date": "2024-01-03T00:00:00Z"},
-                                {"date": "2024-01-02T00:00:00Z"},
+                                _storm_geometry_point(1),
+                                _storm_geometry_point(3, lon=-81.0, lat=26.0, magnitudeValue=65.0, magnitudeUnit="kts"),
+                                _storm_geometry_point(2),
                             ],
                         }
                     ]
@@ -358,9 +363,16 @@ async def test_eonet_client_picks_max_geometry_date_per_event():
     highlights = await client.fetch_recent()
 
     assert len(highlights) == 1
-    assert highlights[0].title == "Tropical Storm"
-    assert highlights[0].category == "Severe Storms"
-    assert highlights[0].event_date == datetime.fromisoformat("2024-01-03T00:00:00+00:00")
+    highlight = highlights[0]
+    assert highlight.title == "Tropical Storm"
+    assert highlight.category == "Severe Storms"
+    assert highlight.event_date == datetime.fromisoformat("2024-01-03T00:00:00+00:00")
+    # Магнитуда берётся с последней по дате точки геометрии (EONET хранит
+    # её там, не на событии целиком, см. docs/tz/TZ_karta_sobytiya_EONET.md).
+    assert highlight.magnitude_value == 65.0
+    assert highlight.magnitude_unit == "kts"
+    assert highlight.geometry[-1].lon == -81.0
+    assert highlight.geometry[-1].lat == 26.0
 
 
 async def test_eonet_client_skips_events_without_geometry_dates():
@@ -376,3 +388,93 @@ async def test_eonet_client_skips_events_without_geometry_dates():
     highlights = await client.fetch_recent()
 
     assert highlights == []
+
+
+async def test_eonet_client_skips_geometry_points_without_coordinates():
+    session = FakeClientSession(
+        {
+            f"{EONET_URL}?status=open&limit=20": FakeResponse(
+                json_data={
+                    "events": [
+                        {
+                            "id": "EONET_2",
+                            "title": "Malformed point",
+                            "categories": [],
+                            "geometry": [{"date": "2024-01-01T00:00:00Z"}, _storm_geometry_point(2)],
+                        }
+                    ]
+                }
+            )
+        }
+    )
+    client = EonetClient(session, EONET_URL)
+
+    highlights = await client.fetch_recent()
+
+    assert len(highlights) == 1
+    assert len(highlights[0].geometry) == 1
+    assert highlights[0].event_date == datetime.fromisoformat("2024-01-02T00:00:00+00:00")
+
+
+async def test_eonet_client_parses_full_event_fields():
+    session = FakeClientSession(
+        {
+            f"{EONET_URL}?status=open&limit=20": FakeResponse(
+                json_data={
+                    "events": [
+                        {
+                            "id": "EONET_21829",
+                            "title": "Wildfire Fairpoint",
+                            "description": "3 Miles W from Fairpoint, SD",
+                            "link": "https://eonet.gsfc.nasa.gov/api/v3/events/EONET_21829",
+                            "closed": None,
+                            "categories": [{"id": "wildfires", "title": "Wildfires"}],
+                            "sources": [{"id": "IRWIN", "url": "https://irwin.doi.gov/observer/incidents/1"}],
+                            "geometry": [_storm_geometry_point(1, magnitudeValue=510.0, magnitudeUnit="acres")],
+                        }
+                    ]
+                }
+            )
+        }
+    )
+    client = EonetClient(session, EONET_URL)
+
+    highlights = await client.fetch_recent()
+
+    assert len(highlights) == 1
+    highlight = highlights[0]
+    assert highlight.id == "EONET_21829"
+    assert highlight.description == "3 Miles W from Fairpoint, SD"
+    assert highlight.link == "https://eonet.gsfc.nasa.gov/api/v3/events/EONET_21829"
+    assert highlight.closed_at is None
+    assert highlight.categories == ["Wildfires"]
+    assert highlight.sources[0].label == "IRWIN"
+    assert highlight.sources[0].url == "https://irwin.doi.gov/observer/incidents/1"
+    assert highlight.magnitude_value == 510.0
+    assert highlight.magnitude_unit == "acres"
+
+
+async def test_eonet_client_parses_closed_event():
+    session = FakeClientSession(
+        {
+            f"{EONET_URL}?status=open&limit=20": FakeResponse(
+                json_data={
+                    "events": [
+                        {
+                            "id": "EONET_3",
+                            "title": "Closed storm",
+                            "closed": "2024-01-05T00:00:00Z",
+                            "categories": [],
+                            "sources": [],
+                            "geometry": [_storm_geometry_point(1)],
+                        }
+                    ]
+                }
+            )
+        }
+    )
+    client = EonetClient(session, EONET_URL)
+
+    highlights = await client.fetch_recent()
+
+    assert highlights[0].closed_at == datetime.fromisoformat("2024-01-05T00:00:00+00:00")

@@ -14,14 +14,20 @@ from infrastructure.nasa.apod_client import ApodData
 
 
 class FakeApodRawClient:
-    def __init__(self, data: ApodData | None = None, raise_not_available: bool = False) -> None:
+    def __init__(
+        self,
+        data: ApodData | None = None,
+        raise_not_available: bool = False,
+        unavailable_days: Sequence[date_] = (),
+    ) -> None:
         self.data = data
         self.raise_not_available = raise_not_available
+        self.unavailable_days = set(unavailable_days)
         self.calls: list[date_] = []
 
     async def fetch_raw(self, day: date_) -> ApodData:
         self.calls.append(day)
-        if self.raise_not_available:
+        if self.raise_not_available or day in self.unavailable_days:
             raise MediaNotAvailable("нет данных")
         assert self.data is not None, "FakeApodRawClient needs data when raise_not_available=False"
         return self.data
@@ -154,6 +160,16 @@ class FakeNaturalEventClient:
     async def fetch_recent(self) -> Sequence[EarthEventHighlight]:
         self.calls += 1
         return self.events
+
+
+class FakeEventMapBuilder:
+    def __init__(self, cache_key: str | None = "EONET_1_2024-01-01") -> None:
+        self.cache_key = cache_key
+        self.built_for: list[EarthEventHighlight] = []
+
+    async def build(self, event: EarthEventHighlight) -> str | None:
+        self.built_for.append(event)
+        return self.cache_key
 
 
 class FakeDigestRepository:
