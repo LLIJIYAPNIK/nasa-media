@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from datetime import date as date_
 from datetime import timedelta
@@ -10,6 +10,7 @@ from application.digest.ports import NaturalEventClient, NearEarthObjectClient, 
 from application.web.homepage_query import SPACE_WEATHER_TYPE_LABELS
 from domain.digest.digest_text import pick_closest_asteroid, pick_latest_earth_event, pick_significant_space_weather
 from domain.digest.size_comparison import compare_to_familiar_object
+from domain.digest.value_objects import EarthEventHighlight, EventSource
 from domain.media.exceptions import MediaNotAvailable
 from infrastructure.nasa.apod_client import ApodData
 
@@ -21,6 +22,17 @@ class UnknownHomepageDetailKind(Exception):
 
 class ApodRawClient(Protocol):
     async def fetch_raw(self, day: date_) -> ApodData: ...
+
+
+class EventMapBuilder(Protocol):
+    """Порт для карты события Земли — см.
+    docs/tz/TZ_karta_sobytiya_EONET.md. Возвращает уже закешированный или
+    только что сгенерированный `cache_key` (без сети — реализация сама
+    решает, генерировать заново или отдать из кеша), либо `None`, если
+    у события нет координат/id, либо генерация не удалась (недоступность
+    карты не должна ломать остальную карточку)."""
+
+    async def build(self, event: EarthEventHighlight) -> str | None: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,7 +63,16 @@ class HomepageDetail:
 
     earth_event_title: str | None = None
     earth_event_category: str | None = None
+    earth_event_categories: Sequence[str] = ()
     earth_event_date: str | None = None
+    earth_event_description: str | None = None
+    earth_event_closed_at: str | None = None
+    earth_event_magnitude_value: float | None = None
+    earth_event_magnitude_unit: str | None = None
+    earth_event_magnitude_description: str | None = None
+    earth_event_sources: Sequence[EventSource] = ()
+    earth_event_link: str | None = None
+    earth_event_map_url: str | None = None
 
 
 class GetHomepageDetail:
@@ -61,11 +82,13 @@ class GetHomepageDetail:
         space_weather_client: SpaceWeatherClient,
         near_earth_object_client: NearEarthObjectClient,
         natural_event_client: NaturalEventClient,
+        event_map_builder: EventMapBuilder,
     ) -> None:
         self._apod_client = apod_client
         self._space_weather_client = space_weather_client
         self._near_earth_object_client = near_earth_object_client
         self._natural_event_client = natural_event_client
+        self._event_map_builder = event_map_builder
         self._handlers: dict[str, Callable[[date_], Awaitable[HomepageDetail]]] = {
             "apod": self._apod_detail,
             "asteroid": self._asteroid_detail,
@@ -149,10 +172,23 @@ class GetHomepageDetail:
         event = pick_latest_earth_event(events)
         if event is None:
             return HomepageDetail(kind="earth-event", available=False, message="Заметных событий на Земле сегодня нет.")
+
+        map_cache_key = await self._event_map_builder.build(event)
+        map_url = f"/api/homepage/earth-event-map/{map_cache_key}.png" if map_cache_key else None
+
         return HomepageDetail(
             kind="earth-event",
             available=True,
             earth_event_title=event.title,
             earth_event_category=event.category,
+            earth_event_categories=event.categories,
             earth_event_date=event.event_date.isoformat(),
+            earth_event_description=event.description,
+            earth_event_closed_at=event.closed_at.isoformat() if event.closed_at else None,
+            earth_event_magnitude_value=event.magnitude_value,
+            earth_event_magnitude_unit=event.magnitude_unit,
+            earth_event_magnitude_description=event.magnitude_description,
+            earth_event_sources=event.sources,
+            earth_event_link=event.link or None,
+            earth_event_map_url=map_url,
         )

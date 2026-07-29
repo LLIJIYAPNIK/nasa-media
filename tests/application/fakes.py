@@ -162,6 +162,16 @@ class FakeNaturalEventClient:
         return self.events
 
 
+class FakeEventMapBuilder:
+    def __init__(self, cache_key: str | None = "EONET_1_2024-01-01") -> None:
+        self.cache_key = cache_key
+        self.built_for: list[EarthEventHighlight] = []
+
+    async def build(self, event: EarthEventHighlight) -> str | None:
+        self.built_for.append(event)
+        return self.cache_key
+
+
 class FakeDigestRepository:
     def __init__(self) -> None:
         self._storage: dict[date_, DigestEntry] = {}

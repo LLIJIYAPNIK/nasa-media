@@ -5,10 +5,11 @@ from datetime import date
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.templating import Jinja2Templates
-from starlette.responses import HTMLResponse
+from starlette.responses import HTMLResponse, Response
 
 from application.web.homepage_detail_query import GetHomepageDetail, UnknownHomepageDetailKind
 from application.web.homepage_query import GetHomepageSnapshot, HomepageSnapshot
+from infrastructure.web.event_map_cache import EventMapFileCache
 from infrastructure.web.snapshot_cache import SnapshotCache
 
 # Порядок и подписи — вариант 4b дизайна (боковая иконочная навигация),
@@ -50,6 +51,7 @@ def build_homepage_router(
     get_snapshot: GetHomepageSnapshot,
     get_detail: GetHomepageDetail,
     cache: SnapshotCache,
+    event_map_cache: EventMapFileCache,
 ) -> APIRouter:
     router = APIRouter()
 
@@ -70,6 +72,17 @@ def build_homepage_router(
         except UnknownHomepageDetailKind as exc:
             raise HTTPException(status_code=404, detail=f"Неизвестный тип карточки: {exc}") from exc
         return asdict(detail)
+
+    @router.get("/api/homepage/earth-event-map/{cache_key}.png")
+    async def earth_event_map(cache_key: str) -> Response:
+        # cache_key валидируется внутри EventMapFileCache (см.
+        # infrastructure/web/event_map_cache.py) — небезопасные значения
+        # (path traversal и т.п.) тихо превращаются в None -> 404, файл на
+        # диске никогда не открывается по непроверенному пути.
+        image_bytes = await event_map_cache.get(cache_key)
+        if image_bytes is None:
+            raise HTTPException(status_code=404, detail="Карта не найдена")
+        return Response(content=image_bytes, media_type="image/png")
 
     def _make_placeholder_endpoint(section_title: str):
         async def _placeholder(request: Request) -> HTMLResponse:

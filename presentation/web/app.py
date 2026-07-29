@@ -17,6 +17,8 @@ from infrastructure.nasa.donki_client import DonkiClient
 from infrastructure.nasa.eonet_client import EonetClient
 from infrastructure.nasa.neows_client import NeoWsClient
 from infrastructure.translation.ru_translator import GoogleRuTranslator
+from infrastructure.web.event_map_builder import OsmEventMapBuilder
+from infrastructure.web.event_map_cache import EventMapFileCache
 from infrastructure.web.snapshot_cache import SnapshotCache
 from presentation.web.routers.homepage_router import NAV_ITEMS, build_homepage_router
 
@@ -35,11 +37,14 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
         templates = Jinja2Templates(directory=BASE_DIR / "templates")
         templates.env.globals["nav_items"] = NAV_ITEMS
 
+        event_map_cache = EventMapFileCache()
+        event_map_builder = OsmEventMapBuilder(session, event_map_cache)
+
         get_snapshot = GetHomepageSnapshot(donki_client, neows_client, eonet_client)
-        get_detail = GetHomepageDetail(apod_client, donki_client, neows_client, eonet_client)
+        get_detail = GetHomepageDetail(apod_client, donki_client, neows_client, eonet_client, event_map_builder)
         cache = SnapshotCache()
 
-        app.include_router(build_homepage_router(templates, get_snapshot, get_detail, cache))
+        app.include_router(build_homepage_router(templates, get_snapshot, get_detail, cache, event_map_cache))
 
         yield
 
