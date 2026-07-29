@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from datetime import UTC, datetime
 from datetime import date as date_
 
 import aiohttp
@@ -35,7 +36,9 @@ class NeoWsClient:
         for objects in data.get("near_earth_objects", {}).values():
             for obj in objects:
                 diameter = obj["estimated_diameter"]["meters"]
-                miss_distance = obj["close_approach_data"][0]["miss_distance"]
+                close_approach = obj["close_approach_data"][0]
+                miss_distance = close_approach["miss_distance"]
+                velocity = close_approach["relative_velocity"]
                 highlights.append(
                     AsteroidHighlight(
                         name=obj["name"],
@@ -44,6 +47,15 @@ class NeoWsClient:
                         miss_distance_km=float(miss_distance["kilometers"]),
                         miss_distance_lunar=float(miss_distance["lunar"]),
                         is_hazardous=bool(obj["is_potentially_hazardous_asteroid"]),
+                        miss_distance_au=float(miss_distance["astronomical"]),
+                        miss_distance_miles=float(miss_distance["miles"]),
+                        velocity_km_s=float(velocity["kilometers_per_second"]),
+                        velocity_km_h=float(velocity["kilometers_per_hour"]),
+                        close_approach_time=datetime.fromtimestamp(
+                            close_approach["epoch_date_close_approach"] / 1000, tz=UTC
+                        ),
+                        jpl_url=obj["nasa_jpl_url"],
+                        is_sentry_object=bool(obj["is_sentry_object"]),
                     )
                 )
         return highlights
