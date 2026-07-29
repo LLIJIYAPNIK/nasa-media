@@ -21,9 +21,11 @@ function renderUnavailable(detail) {
 }
 
 function renderApod(detail) {
+  const notice = detail.message ? `<p class="detail-modal-notice">${escapeHtml(detail.message)}</p>` : "";
   const copyright = detail.apod_copyright ? `<p>© ${escapeHtml(detail.apod_copyright)}</p>` : "";
   return `
     <h2 id="detail-modal-title">${escapeHtml(detail.apod_title)}</h2>
+    ${notice}
     <img src="${escapeHtml(detail.apod_image_url)}" alt="${escapeHtml(detail.apod_title)}">
     <p>${escapeHtml(detail.apod_description)}</p>
     ${copyright}

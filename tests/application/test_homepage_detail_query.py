@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 import pytest
 
@@ -43,6 +43,26 @@ async def test_apod_detail_unavailable_has_human_message():
 
     assert detail.available is False
     assert detail.message
+
+
+async def test_apod_detail_falls_back_to_previous_day_when_today_not_published_yet():
+    apod_data = ApodData(title="Title", explanation="Text", copyright="Jane", image_url="http://img")
+    apod_client = FakeApodRawClient(data=apod_data, unavailable_days=[DAY])
+
+    detail = await _query(apod_client=apod_client).execute("apod", DAY)
+
+    assert detail.available is True
+    assert detail.apod_title == "Title"
+    assert detail.apod_image_url == "http://img"
+    assert detail.message
+    assert apod_client.calls == [DAY, DAY - timedelta(days=1)]
+
+
+async def test_apod_detail_unavailable_when_today_and_previous_day_both_missing():
+    detail = await _query(apod_client=FakeApodRawClient(raise_not_available=True)).execute("apod", DAY)
+
+    assert detail.available is False
+    assert detail.apod_title is None
 
 
 async def test_asteroid_detail_available_includes_full_diameter_range_and_comparison():
