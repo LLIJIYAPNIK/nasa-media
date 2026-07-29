@@ -132,3 +132,55 @@
   font: 700 15px var(--font-mono);
   text-align: right;
 }
+
+.unit-chip {
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid var(--color-glass-border-soft);
+  color: var(--color-text-dim);
+  font: 700 12px var(--font-mono);
+  letter-spacing: .3px;
+  cursor: pointer;
+}
+
+.unit-chip:hover {
+  background: rgba(255, 255, 255, .14);
+}
+
+.unit-chip--active {
+  background: linear-gradient(160deg, rgba(59, 130, 246, .35), rgba(59, 130, 246, .16) 70%);
+  border-color: var(--color-accent);
+  color: var(--color-text);
+}
+
+.hazard-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 16px;
+  border-radius: 999px;
+  font: 700 12px var(--font-mono);
+  letter-spacing: .4px;
+}
+
+.hazard-pill--safe {
+  background: rgba(52, 211, 153, .16);
+  border: 1px solid var(--color-safe);
+  color: var(--color-safe);
+}
+
+.hazard-pill--danger {
+  background: rgba(244, 63, 94, .18);
+  border: 1px solid var(--color-danger);
+  color: var(--color-danger);
+  animation: hazard-pill-glow 2.4s ease-in-out infinite;
+}
+
+@keyframes hazard-pill-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 rgba(244, 63, 94, 0);
+  }
+  50% {
+    box-shadow: 0 0 14px rgba(244, 63, 94, .55);
+  }
+}

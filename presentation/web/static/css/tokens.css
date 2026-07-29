@@ -10,6 +10,11 @@
   --color-accent-ink: #04111f;
   --color-accent-soft: #8fbcfb;
 
+  --color-danger: #f43f5e;
+  --color-danger-ink: #2a0510;
+  --color-safe: #34d399;
+  --color-safe-ink: #04241a;
+
   --color-text: #eef3fb;
   --color-text-dim: rgba(238, 243, 251, .82);
   --color-text-faint: rgba(238, 243, 251, .55);
