@@ -4,7 +4,7 @@ import pytest
 
 from application.web.homepage_detail_query import GetHomepageDetail, UnknownHomepageDetailKind
 from domain.digest.speed_comparison import compare_speed_to_familiar_reference
-from domain.digest.value_objects import AsteroidHighlight, EarthEventHighlight, SpaceWeatherHighlight
+from domain.digest.value_objects import AsteroidHighlight, EarthEventHighlight, EventSource, SpaceWeatherHighlight
 from infrastructure.nasa.apod_client import ApodData
 from tests.application.fakes import (
     FakeApodRawClient,

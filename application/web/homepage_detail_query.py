@@ -11,6 +11,7 @@ from application.web.homepage_query import SPACE_WEATHER_TYPE_LABELS
 from domain.digest.digest_text import pick_closest_asteroid, pick_latest_earth_event, pick_significant_space_weather
 from domain.digest.size_comparison import compare_to_familiar_object
 from domain.digest.speed_comparison import compare_speed_to_familiar_reference
+from domain.digest.value_objects import EarthEventHighlight, EventSource
 from domain.media.exceptions import MediaNotAvailable
 from infrastructure.nasa.apod_client import ApodData
 
