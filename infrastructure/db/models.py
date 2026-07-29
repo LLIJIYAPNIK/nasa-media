@@ -46,6 +46,22 @@ class WeeklyHighlightModel(Base):
     file_id: Mapped[str | None] = mapped_column(default=None)
 
 
+class ApodWebEntryModel(Base):
+    """Кеш содержимого APOD для веб-сетки (docs/tz/TZ-web-apod.md) — «эти
+    данные уже получены от NASA», отдельно от Telegram-кеша ApodModel («это
+    сообщение уже переслано в Telegram»)."""
+
+    __tablename__ = "apod_web_entry"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    date: Mapped[date_] = mapped_column(Date, unique=True)
+    title: Mapped[str]
+    explanation: Mapped[str]
+    copyright: Mapped[str | None] = mapped_column(default=None)
+    image_url: Mapped[str]
+    hdurl: Mapped[str | None] = mapped_column(default=None)
+
+
 class UserModel(Base):
     __tablename__ = "users"
 

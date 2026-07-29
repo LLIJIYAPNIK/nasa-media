@@ -147,6 +147,73 @@
   margin: 0;
 }
 
+.detail-modal-event-list {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detail-modal-event-list:empty {
+  display: none;
+}
+
+.detail-modal-event-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, .05);
+  border: 1px solid var(--color-glass-border-soft);
+}
+
+.event-list-label {
+  font: 500 14px/1.5 var(--font-body);
+  color: var(--color-text);
+}
+
+.event-list-time {
+  font: 500 12px/1.5 var(--font-mono);
+  color: var(--color-text-faint);
+  white-space: nowrap;
+}
+
+.detail-modal-summary {
+  font: 700 14px/1.5 var(--font-body);
+  color: var(--color-accent-soft);
+  margin: 0;
+}
+
+.calm-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  padding: 12px 0 4px;
+}
+
+.calm-state-icon {
+  font-size: 48px;
+  line-height: 1;
+}
+
+.calm-state-headline {
+  font: 700 17px/1.4 var(--font-heading);
+  color: var(--color-text);
+  margin: 0;
+}
+
+.calm-state-note {
+  font: 400 14px/1.65 var(--font-body);
+  color: var(--color-text-dim);
+  max-width: 46ch;
+  margin: 0;
+}
+
 .event-pills {
   display: flex;
   flex-wrap: wrap;

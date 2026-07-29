@@ -2,7 +2,7 @@ from datetime import date, datetime, timedelta
 
 import pytest
 
-from application.web.homepage_detail_query import GetHomepageDetail, UnknownHomepageDetailKind
+from application.web.homepage_detail_query import GetHomepageDetail, SpaceWeatherEventItem, UnknownHomepageDetailKind
 from domain.digest.speed_comparison import compare_speed_to_familiar_reference
 from domain.digest.value_objects import AsteroidHighlight, EarthEventHighlight, EventSource, SpaceWeatherHighlight
 from infrastructure.nasa.apod_client import ApodData
@@ -116,18 +116,47 @@ async def test_asteroid_detail_unavailable_when_no_asteroids():
     assert detail.message
 
 
-async def test_space_weather_detail_available_includes_type_and_time():
+async def test_space_weather_detail_available_includes_summary_type_and_time():
     event = SpaceWeatherHighlight("GST", datetime(2024, 1, 1, 10))
 
     detail = await _query(space_weather_client=FakeSpaceWeatherClient([event])).execute("space-weather", DAY)
 
     assert detail.available is True
-    assert detail.space_weather_type == "GST"
-    assert detail.space_weather_label == "Геомагнитная буря"
-    assert detail.space_weather_issued_at == datetime(2024, 1, 1, 10).isoformat()
+    assert detail.space_weather_summary_type == "GST"
+    assert detail.space_weather_summary_label == "Геомагнитная буря"
+    assert detail.space_weather_summary_issued_at == datetime(2024, 1, 1, 10).isoformat()
+    assert detail.space_weather_events == [
+        SpaceWeatherEventItem(type="GST", label="Геомагнитная буря", issued_at=datetime(2024, 1, 1, 10).isoformat())
+    ]
 
 
-async def test_space_weather_detail_unavailable_when_calm():
+async def test_space_weather_detail_lists_all_events_sorted_by_time():
+    early = SpaceWeatherHighlight("FLR", datetime(2024, 1, 1, 6))
+    late = SpaceWeatherHighlight("GST", datetime(2024, 1, 1, 18))
+
+    detail = await _query(space_weather_client=FakeSpaceWeatherClient([late, early])).execute("space-weather", DAY)
+
+    assert detail.available is True
+    assert [item.type for item in detail.space_weather_events] == ["FLR", "GST"]
+    # GST (rank 0) beats FLR (rank 1) regardless of order in the input list.
+    assert detail.space_weather_summary_type == "GST"
+
+
+async def test_space_weather_detail_available_but_calm_when_no_significant_event():
+    event = SpaceWeatherHighlight("Report", datetime(2024, 1, 1, 6))
+
+    detail = await _query(space_weather_client=FakeSpaceWeatherClient([event])).execute("space-weather", DAY)
+
+    assert detail.available is True
+    assert detail.space_weather_events == [
+        SpaceWeatherEventItem(type="Report", label="Еженедельный отчёт", issued_at=datetime(2024, 1, 1, 6).isoformat())
+    ]
+    assert detail.space_weather_summary_type is None
+    assert detail.space_weather_summary_label == "Спокойно"
+    assert detail.space_weather_summary_issued_at is None
+
+
+async def test_space_weather_detail_unavailable_when_no_events_at_all():
     detail = await _query().execute("space-weather", DAY)
 
     assert detail.available is False

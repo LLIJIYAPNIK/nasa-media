@@ -31,6 +31,7 @@ NAV_ITEMS = (
 # рендерит тот же placeholder.html, так что заглушка не пропадает.
 PLACEHOLDER_SECTIONS = {
     "/apod": "APOD",
+    "/epic": "EPIC",
     "/asteroids": "Астероиды",
     "/space-weather": "Космическая погода",
     "/earth-events": "События Земли",
