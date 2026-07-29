@@ -10,6 +10,7 @@ from infrastructure.nasa.donki_client import DonkiClient
 from infrastructure.nasa.eonet_client import EonetClient
 from infrastructure.nasa.epic_availability_client import EpicAvailabilityClient
 from infrastructure.nasa.epic_client import EPIC_ARCHIVE_BASE_URL, EpicProvider
+from infrastructure.nasa.epic_frames import EpicFrameMeta, fetch_day_frames, fetch_frame_bytes
 from infrastructure.nasa.neows_client import NeoWsClient
 from tests.infrastructure.fake_aiohttp import FakeClientSession, FakeResponse
 
@@ -113,12 +114,16 @@ async def test_apod_provider_raises_when_nasa_has_no_data_for_date():
         await provider.fetch(date(2024, 1, 1))
 
 
+def _epic_frame_json(image: str, lat: float = 10.0, lon: float = 20.0) -> dict:
+    return {"image": image, "centroid_coordinates": {"lat": lat, "lon": lon}}
+
+
 async def test_epic_provider_builds_animation_from_every_returned_frame():
     day = date(2024, 1, 1)
     session = FakeClientSession(
         {
             f"{EPIC_URL}/date/2024-01-01?api_key=key": FakeResponse(
-                json_data=[{"image": "frame1"}, {"image": "frame2"}]
+                json_data=[_epic_frame_json("frame1"), _epic_frame_json("frame2")]
             ),
             f"{EPIC_ARCHIVE_BASE_URL}/2024/01/01/png/frame1.png?api_key=key": FakeResponse(body=_fake_png_bytes("red")),
             f"{EPIC_ARCHIVE_BASE_URL}/2024/01/01/png/frame2.png?api_key=key": FakeResponse(
@@ -141,6 +146,38 @@ async def test_epic_provider_raises_when_no_frames_returned():
 
     with pytest.raises(MediaNotAvailable):
         await provider.fetch(date(2024, 1, 1))
+
+
+async def test_fetch_day_frames_parses_image_and_centroid():
+    session = FakeClientSession(
+        {
+            f"{EPIC_URL}/date/2024-01-01?api_key=key": FakeResponse(
+                json_data=[_epic_frame_json("frame1", lat=12.5, lon=-45.25)]
+            )
+        }
+    )
+
+    frames = await fetch_day_frames(session, "key", EPIC_URL, date(2024, 1, 1))
+
+    assert frames == [EpicFrameMeta(image="frame1", centroid_lat=12.5, centroid_lon=-45.25)]
+
+
+async def test_fetch_day_frames_returns_empty_list_when_no_frames():
+    session = FakeClientSession({f"{EPIC_URL}/date/2024-01-01?api_key=key": FakeResponse(json_data=[])})
+
+    frames = await fetch_day_frames(session, "key", EPIC_URL, date(2024, 1, 1))
+
+    assert frames == []
+
+
+async def test_fetch_frame_bytes_builds_archive_url_from_day_and_image_name():
+    session = FakeClientSession(
+        {f"{EPIC_ARCHIVE_BASE_URL}/2024/01/01/png/frame1.png?api_key=key": FakeResponse(body=_fake_png_bytes("red"))}
+    )
+
+    data = await fetch_frame_bytes(session, "key", date(2024, 1, 1), "frame1")
+
+    assert data == _fake_png_bytes("red")
 
 
 async def test_epic_availability_client_parses_and_sorts_dates():
