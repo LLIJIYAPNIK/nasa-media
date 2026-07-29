@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}EPIC — nasa-media{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/epic.css') }}">
+{% endblock %}
+{% block import_map %}
+<script type="importmap">
+{"imports": {
+  "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+}}
+</script>
+{% endblock %}
+{% block content %}
+<div
+  class="epic-mount"
+  id="epic-mount"
+  data-centroid-lat="{{ snapshot.centroid_lat }}"
+  data-centroid-lon="{{ snapshot.centroid_lon }}"
+  data-texture-url="{{ snapshot.texture_url }}"
+>
+  <canvas id="epic-canvas"></canvas>
+  <img id="epic-fallback" class="epic-fallback" src="{{ snapshot.texture_url }}" alt="Земля глазами EPIC" hidden>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script type="module" src="{{ url_for('static', path='js/epic-earth.js') }}"></script>
+{% endblock %}
